@@ -1,0 +1,64 @@
+# Builds the FUTO Tweaks module APK.
+# Pull requests get the APK attached to the run; pushes to main also publish a release.
+# Signing uses the same four secrets as the FUTO fork (FORK_KEYSTORE_B64 and friends).
+# Without them the build still works, signed with a throwaway debug key.
+
+name: Build module APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Write signing config
+        env:
+          KEYSTORE_B64: ${{ secrets.FORK_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.FORK_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FORK_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FORK_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 --decode > release.jks
+            printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+          else
+            echo "::warning::No signing secrets, using the debug key"
+          fi
+
+      - name: Build
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/*.apk "out/futo-tweaks-r${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: futo-tweaks-r${{ github.run_number }}
+          path: out/*.apk
+
+      - name: Publish release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: r${{ github.run_number }}
+          name: FUTO Tweaks r${{ github.run_number }}
+          files: out/*.apk
