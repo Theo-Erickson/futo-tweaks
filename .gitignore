@@ -6,3 +6,4 @@ local.properties
 # Signing material never goes in the repo
 keystore.properties
 *.jks
+nosdk/out/
