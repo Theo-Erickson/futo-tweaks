@@ -1,0 +1,21 @@
+// FUTO Tweaks: LSPosed / Vector module for FUTO Keyboard
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // Classic Xposed API (compile-only, LSPosed and Vector provide it at runtime)
+        maven { url 'https://api.xposed.info/' }
+    }
+}
+
+rootProject.name = 'FutoTweaks'
+include ':app'

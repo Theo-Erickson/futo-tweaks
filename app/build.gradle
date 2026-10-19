@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.theo.futotweaks'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.theo.futotweaks'
+        // Pixel 9 Pro and current LSPosed/Vector builds, no need to support older devices
+        minSdk 30
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    // Optional release signing: CI writes keystore.properties from repository secrets.
+    // Without it, release builds fall back to the debug key, which is fine for local testing.
+    def keystorePropsFile = rootProject.file('keystore.properties')
+    signingConfigs {
+        if (keystorePropsFile.exists()) {
+            release {
+                def props = new Properties()
+                keystorePropsFile.withInputStream { props.load(it) }
+                storeFile rootProject.file(props['storeFile'])
+                storePassword props['storePassword']
+                keyAlias props['keyAlias']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // No minification: Xposed loads MainHook by name from assets/xposed_init
+            minifyEnabled false
+            signingConfig keystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    // Provided by the framework at runtime, must never be bundled into the APK
+    compileOnly 'de.robv.android.xposed:api:82'
+}

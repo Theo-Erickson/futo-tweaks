@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Suggested scope: every FUTO Keyboard variant. Enable whichever one you have installed. -->
+    <string-array name="xposed_scope">
+        <item>org.futo.inputmethod.latin</item>
+        <item>org.futo.inputmethod.latin.playstore</item>
+        <item>org.futo.inputmethod.latin.unstable</item>
+    </string-array>
+</resources>

@@ -1,0 +1,8 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+# Signing material never goes in the repo
+keystore.properties
+*.jks
