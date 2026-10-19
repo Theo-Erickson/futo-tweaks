@@ -82,7 +82,7 @@ public class MainHook implements IXposedHookLoadPackage {
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) {
         if (!TARGETS.contains(lpparam.packageName)) return;
 
-        sPrefs = new XSharedPreferences(BuildConfig.APPLICATION_ID, Prefs.FILE);
+        sPrefs = new XSharedPreferences(Prefs.MODULE_PACKAGE, Prefs.FILE);
         refreshPrefs();
 
         hookImeService();

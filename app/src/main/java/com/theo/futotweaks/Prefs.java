@@ -7,6 +7,9 @@ package com.theo.futotweaks;
 public final class Prefs {
     private Prefs() {}
 
+    /** This module's package, used by XSharedPreferences to find the settings file. */
+    public static final String MODULE_PACKAGE = "com.theo.futotweaks";
+
     /** SharedPreferences file name, read in the keyboard through XSharedPreferences. */
     public static final String FILE = "futo_tweaks";
 

@@ -3,10 +3,14 @@ package com.theo.futotweaks;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -14,6 +18,7 @@ import android.widget.TextView;
 
 /**
  * Plain settings screen built in code, so the module needs no AndroidX or layout files.
+ * Written in Java 8 without lambdas, so it also builds with the no-SDK toolchain.
  *
  * Preferences are written world-readable so the keyboard process can read them with
  * XSharedPreferences. LSPosed and Vector allow this for modules that declare
@@ -31,8 +36,8 @@ public class SettingsActivity extends Activity {
 
         final LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
-        final int pad = dp(16);
-        list.setPadding(pad, pad, pad, pad);
+
+        list.addView(title("FUTO Tweaks"));
 
         if (!mPrefsReadable) {
             list.addView(note("The module isn't active in LSPosed or Vector yet, so the keyboard can't see these "
@@ -58,8 +63,18 @@ public class SettingsActivity extends Activity {
         final ScrollView scroll = new ScrollView(this);
         scroll.addView(list, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        // Respect system bar insets so content isn't drawn under the status bar
-        scroll.setFitsSystemWindows(true);
+
+        // targetSdk 35 forces edge to edge: pad the content by the system bars and cutout ourselves
+        final int pad = dp(16);
+        scroll.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(final View v, final WindowInsets insets) {
+                final Insets bars = insets.getInsets(
+                        WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                list.setPadding(pad + bars.left, pad + bars.top, pad + bars.right, pad + bars.bottom);
+                return insets;
+            }
+        });
         setContentView(scroll);
     }
 
@@ -80,9 +95,22 @@ public class SettingsActivity extends Activity {
         sw.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         sw.setPadding(0, dp(12), 0, dp(12));
         sw.setChecked(mPrefs.getBoolean(key, Prefs.defaultFor(key)));
-        sw.setOnCheckedChangeListener((button, checked) ->
-                mPrefs.edit().putBoolean(key, checked).apply());
+        sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(final CompoundButton button, final boolean checked) {
+                mPrefs.edit().putBoolean(key, checked).apply();
+            }
+        });
         return sw;
+    }
+
+    private TextView title(final String text) {
+        final TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+        tv.setPadding(0, dp(8), 0, dp(8));
+        return tv;
     }
 
     private TextView header(final String text) {
