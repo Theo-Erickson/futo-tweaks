@@ -15,6 +15,7 @@ public final class MotionEvent {
     public final float getY(int pointerIndex) { throw new RuntimeException("Stub!"); }
     public final int getPointerId(int pointerIndex) { throw new RuntimeException("Stub!"); }
     public final int findPointerIndex(int pointerId) { throw new RuntimeException("Stub!"); }
+    public final int getPointerCount() { throw new RuntimeException("Stub!"); }
     public final void setAction(int action) { throw new RuntimeException("Stub!"); }
     public final void recycle() { throw new RuntimeException("Stub!"); }
 }

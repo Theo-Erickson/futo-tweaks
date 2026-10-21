@@ -5,6 +5,8 @@ public final class XposedHelpers {
     public static XC_MethodHook.Unhook findAndHookMethod(String className, ClassLoader classLoader, String methodName, Object... parameterTypesAndCallback) { throw new RuntimeException("Stub!"); }
     public static Object getObjectField(Object obj, String fieldName) { throw new RuntimeException("Stub!"); }
     public static int getIntField(Object obj, String fieldName) { throw new RuntimeException("Stub!"); }
+    public static boolean getBooleanField(Object obj, String fieldName) { throw new RuntimeException("Stub!"); }
+    public static Object getStaticObjectField(Class<?> clazz, String fieldName) { throw new RuntimeException("Stub!"); }
     public static Object getAdditionalInstanceField(Object obj, String key) { throw new RuntimeException("Stub!"); }
     public static Object setAdditionalInstanceField(Object obj, String key, Object value) { throw new RuntimeException("Stub!"); }
 }
