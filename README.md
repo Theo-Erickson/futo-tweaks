@@ -11,8 +11,17 @@ keyboard at runtime, so you keep using the official FUTO app and its updates.
   language swipe and long press keep working.
 - **Hide the keyboard navigation bar:** removes the down arrow and keyboard switcher below
   the keys (Android 15 or newer).
-- **Keypress effects:** ripple, key glow, particles, and a spacebar drag trail, each toggled
-  separately, colored with your Material You accent.
+- **Typing effects:** key pop, letter float, a heat streak that warms as you type faster, and
+  special keys (backspace crumbles, enter sweeps its row, space shimmers).
+- **Swipe typing effects:** key trace, and letter hop, where crossed letters hop into the
+  suggestion bar and snap together into the recognized word.
+- **Long press and spacebar:** a charge ring that fills during a hold, and a trackpad look
+  (dimmed keys and a grid) while the spacebar moves the cursor.
+- **Keyboard appearing:** rows cascade into place, bottom first.
+- **Classic effects:** ripple, key glow, particles, and a spacebar drag trail.
+
+Every effect has its own toggle and uses your Material You accent. Effects switch off when
+Android's "Remove animations" setting is on.
 
 ## Install
 
