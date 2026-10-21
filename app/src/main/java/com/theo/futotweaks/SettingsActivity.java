@@ -51,14 +51,32 @@ public class SettingsActivity extends Activity {
         list.addView(toggle(Prefs.HIDE_NAV_BAR, "Hide keyboard navigation bar",
                 "Removes the down arrow and keyboard switcher below the keys. Android 15 or newer."));
 
-        list.addView(header("Keypress effects"));
+        list.addView(header("Typing"));
+        list.addView(toggle(Prefs.EFFECT_POP, "Key pop", "The key swells past its edges and springs back"));
+        list.addView(toggle(Prefs.EFFECT_LETTER_FLOAT, "Letter float", "The typed letter rises off its key and fades"));
+        list.addView(toggle(Prefs.EFFECT_HEAT, "Heat streak", "A glow on the keyboard's top edge warms toward orange as you type faster"));
+        list.addView(toggle(Prefs.EFFECT_SPECIAL_KEYS, "Special keys", "Backspace crumbles, enter sweeps its row, space shimmers"));
+
+        list.addView(header("Swipe typing"));
+        list.addView(toggle(Prefs.EFFECT_KEY_TRACE, "Key trace", "Keys light up as the swipe crosses them"));
+        list.addView(toggle(Prefs.EFFECT_LETTER_HOP, "Letter hop", "Crossed letters hop into the suggestion bar and snap together into the word"));
+
+        list.addView(header("Long press and spacebar"));
+        list.addView(toggle(Prefs.EFFECT_CHARGE_RING, "Charge ring", "A ring fills around the key while you hold it"));
+        list.addView(toggle(Prefs.EFFECT_TRACKPAD, "Spacebar trackpad", "Keys dim and a grid appears while the spacebar moves the cursor"));
+        list.addView(toggle(Prefs.EFFECT_TRAIL, "Spacebar trail", "A glowing trail follows your finger while dragging the spacebar"));
+
+        list.addView(header("Keyboard appearing"));
+        list.addView(toggle(Prefs.EFFECT_CASCADE, "Row cascade", "Rows rise into place one after another, bottom first"));
+
+        list.addView(header("Classic effects"));
         list.addView(toggle(Prefs.EFFECT_RIPPLE, "Ripple", "A ring expands from where you touch"));
         list.addView(toggle(Prefs.EFFECT_GLOW, "Key glow", "The pressed key flashes and fades"));
         list.addView(toggle(Prefs.EFFECT_PARTICLES, "Particles", "A small burst of sparks on each press"));
-        list.addView(toggle(Prefs.EFFECT_TRAIL, "Spacebar trail", "A glowing trail follows your finger while dragging the spacebar"));
 
         list.addView(note("Changes apply the next time the keyboard opens. If something doesn't update, "
-                + "force stop FUTO Keyboard in Android settings."));
+                + "force stop FUTO Keyboard in Android settings. Effects turn off automatically when "
+                + "Android's \"Remove animations\" setting is on."));
 
         final ScrollView scroll = new ScrollView(this);
         scroll.addView(list, new ViewGroup.LayoutParams(
