@@ -11,8 +11,8 @@ android {
         // Pixel 9 Pro and current LSPosed/Vector builds, no need to support older devices
         minSdk 30
         targetSdk 35
-        versionCode 2
-        versionName '1.1.0'
+        versionCode 3
+        versionName '1.2.0'
     }
 
     // Optional release signing: CI writes keystore.properties from repository secrets.
@@ -46,6 +46,12 @@ android {
 
     buildFeatures {
         buildConfig true
+    }
+
+    // keyfx, the effects library, lives in its own folder with no FUTO or Xposed code,
+    // so it can move to its own repository later. Until then it compiles into this app.
+    sourceSets {
+        main.java.srcDirs += '../keyfx/src/main/java'
     }
 }
 
