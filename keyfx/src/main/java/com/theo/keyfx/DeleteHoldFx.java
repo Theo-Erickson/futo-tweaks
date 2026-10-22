@@ -43,7 +43,7 @@ final class DeleteHoldFx extends FxModule {
         final FxKey k;
         final String button, letters;
         final long start;
-        long end;
+        long end, lastLaunch;
         float jx, jy;
         final ArrayList<Flying> parts = new ArrayList<>();
         final ArrayList<float[]> bubbles = new ArrayList<>(); // x, y, r, t0, speed
@@ -92,7 +92,8 @@ final class DeleteHoldFx extends FxModule {
             final float flight = fx.D(fx.settings.f("delHold", "flight")), swirl = fx.settings.f("delHold", "swirl");
             for (int i = 0; i < parts.size(); i++) {
                 final Flying q = parts.get(i);
-                final float u = (t - q.t0) / flight;
+                // Waiting letters (launch still ahead) sit at their place in the text
+                final float u = Math.max(0, (t - q.t0) / flight);
                 if (u >= 1) {
                     arrive(tx, ty, s);
                     parts.remove(i);
@@ -239,7 +240,7 @@ final class DeleteHoldFx extends FxModule {
         if ("press".equals(h.letters)) {
             // As if backspace were tapped once for this letter
             FxParts.pop(fx, h.k);
-            if (fx.on("del")) SpecialKeysFx.deleteTap(fx, h.k, L);
+            if (fx.on("del")) SpecialKeysFx.deleteTap(fx, h.k, new FxLetter[] { L });
             return;
         }
         final float tx = h.tx(), ty = h.ty(), dx = L.x - tx, dy = L.y - ty;
@@ -247,7 +248,9 @@ final class DeleteHoldFx extends FxModule {
         q.ch = L.ch;
         q.sx = L.x;
         q.sy = L.y;
-        q.t0 = fx.now();
+        // Letters of a word deleted at once leave one after another, not in a clump
+        q.t0 = Math.max(fx.now(), h.lastLaunch + (long) fx.D(35));
+        h.lastLaunch = q.t0;
         q.d0 = (float) Math.hypot(dx, dy);
         q.a0 = (float) Math.atan2(dy, dx);
         // Vacuum: an S-curve that dips below the letter, then swoops down into the key from above

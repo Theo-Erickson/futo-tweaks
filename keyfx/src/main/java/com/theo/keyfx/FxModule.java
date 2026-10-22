@@ -21,11 +21,16 @@ public abstract class FxModule {
     /** A key typed something. glyph is what was typed (capitals included), x the touch point. */
     public void onKeyTyped(FxKey k, String glyph, float x) {}
 
-    /** Backspace tapped once; letter is what it deleted, or null when unknown. */
-    public void onDeleteTap(FxKey k, FxLetter letter) {}
+    /**
+     * Backspace tapped once. letters is everything that press deleted, in text order: one letter
+     * usually, a whole word when the keyboard deletes one (like undoing a swiped word), or empty
+     * when the host can't tell.
+     */
+    public void onDeleteTap(FxKey k, FxLetter[] letters) {}
 
     public void onDeleteHoldStart(FxKey k) {}
 
+    /** One letter deleted during a hold. A word deleted at once arrives as one call per letter, right to left. */
     public void onDeleteHoldLetter(FxLetter letter) {}
 
     public void onDeleteHoldEnd() {}
