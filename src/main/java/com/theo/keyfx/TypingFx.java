@@ -66,7 +66,7 @@ final class TypingFx extends FxModule {
     }
 
     @Override
-    public void onDeleteTap(FxKey k, FxLetter letter) {
+    public void onDeleteTap(FxKey k, FxLetter[] letters) {
         addHeat(fx.settings.f("heat", "build"));
     }
 

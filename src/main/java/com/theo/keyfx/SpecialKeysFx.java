@@ -51,8 +51,8 @@ final class SpecialKeysFx extends FxModule {
     }
 
     @Override
-    public void onDeleteTap(FxKey k, FxLetter letter) {
-        if (fx.on("del")) deleteTap(fx, k, letter);
+    public void onDeleteTap(FxKey k, FxLetter[] letters) {
+        if (fx.on("del")) deleteTap(fx, k, letters);
     }
 
     // region Enter and space
@@ -146,20 +146,28 @@ final class SpecialKeysFx extends FxModule {
 
     // region Backspace tap
 
-    /** One backspace press: an effect on the key, and optionally the same treatment for the deleted letter. */
-    static void deleteTap(KeyFx fx, FxKey k, FxLetter letter) {
+    /**
+     * One backspace press: an effect on the key, and optionally the same treatment for every
+     * letter it deleted. A whole word goes letter by letter from the right, like it was erased.
+     */
+    static void deleteTap(KeyFx fx, FxKey k, FxLetter[] letters) {
         final String tap = fx.settings.s("del", "tap");
         final float s = fx.S("del");
-        final boolean withLetter = letter != null && fx.settings.b("del", "letterFx");
-        if ("fire".equals(tap)) {
-            fireOnKey(fx, k, s);
-            if (withLetter) burnLetter(fx, letter, s);
-        } else if ("slash".equals(tap)) {
-            final float ang = slashOnKey(fx, k, s);
-            if (withLetter) cutLetter(fx, letter, ang, s);
-        } else if ("shatter".equals(tap)) {
-            shatterKey(fx, k, s);
-            if (withLetter) shatterLetter(fx, letter, s);
+        final boolean withLetters = fx.settings.b("del", "letterFx");
+        float ang = 0;
+        if ("fire".equals(tap)) fireOnKey(fx, k, s);
+        else if ("slash".equals(tap)) ang = slashOnKey(fx, k, s);
+        else if ("shatter".equals(tap)) shatterKey(fx, k, s);
+        else return;
+        if (!withLetters) return;
+        final float step = fx.D(28);
+        for (int i = 0; i < letters.length; i++) {
+            final FxLetter letter = letters[i];
+            if (letter == null) continue;
+            final float delay = (letters.length - 1 - i) * step;
+            if ("fire".equals(tap)) burnLetter(fx, letter, s, delay);
+            else if ("slash".equals(tap)) cutLetter(fx, letter, ang, s, delay);
+            else shatterLetter(fx, letter, s, delay);
         }
     }
 
@@ -200,8 +208,8 @@ final class SpecialKeysFx extends FxModule {
     }
 
     /** The deleted letter heats from its own color to flame, rises a little and chars away. */
-    private static void burnLetter(final KeyFx fx, final FxLetter L, final float s) {
-        final long t0 = fx.now();
+    private static void burnLetter(final KeyFx fx, final FxLetter L, final float s, final float delay) {
+        final long t0 = fx.now() + (long) delay;
         final float life = fx.D(fx.settings.f("del", "fireLife") * 1.2f), height = fx.settings.f("del", "fireHeight");
         final float[] dx = new float[8], vy = new float[8], r = new float[8], d = new float[8];
         for (int i = 0; i < 8; i++) {
@@ -213,7 +221,8 @@ final class SpecialKeysFx extends FxModule {
         fx.add(new Effect() {
             @Override
             public boolean draw(Canvas c, long t) {
-                final float u = (t - t0) / life;
+                // Before its turn (u < 0) the letter just waits where it was
+                final float u = Math.max(0, (t - t0) / life);
                 if (u >= 1) return false;
                 final int color = u < 0.15f ? Fx.alpha(Fx.mix(fx.labelColor(), 0xFFFFD36B, u / 0.15f), s)
                         : Fx.fire((u - 0.15f) / 0.85f, (float) Math.pow(1 - u, 1.3) * s);
@@ -271,8 +280,8 @@ final class SpecialKeysFx extends FxModule {
     }
 
     /** The deleted letter is cut along the slash: the halves slide apart, tumble and fall. */
-    private static void cutLetter(final KeyFx fx, final FxLetter L, final float ang, final float s) {
-        final long t0 = fx.now();
+    private static void cutLetter(final KeyFx fx, final FxLetter L, final float ang, final float s, final float delay) {
+        final long t0 = fx.now() + (long) delay;
         final float cutAt = fx.D(fx.settings.f("del", "slashSpeed")), life = cutAt + fx.D(650);
         final float nx = -(float) Math.sin(ang), ny = (float) Math.cos(ang), spin = fx.rand(0.6f, 1.4f);
         final float box = Math.max(L.size, L.w) * 2.4f, gravity = fx.dp(260), apart = fx.dp(14);
@@ -382,8 +391,8 @@ final class SpecialKeysFx extends FxModule {
     }
 
     /** The deleted letter breaks into four pieces that scatter. */
-    private static void shatterLetter(final KeyFx fx, final FxLetter L, final float s) {
-        final long t0 = fx.now();
+    private static void shatterLetter(final KeyFx fx, final FxLetter L, final float s, final float delay) {
+        final long t0 = fx.now() + (long) delay;
         final float life = fx.D(600), box = Math.max(L.size, L.w) * 1.2f, gravity = fx.dp(300);
         final int[] sx = { -1, 1, -1, 1 }, sy = { -1, -1, 1, 1 };
         final float[] vx = new float[4], vy = new float[4], spin = new float[4];
@@ -397,6 +406,11 @@ final class SpecialKeysFx extends FxModule {
             public boolean draw(Canvas c, long t) {
                 final float u = (t - t0) / life;
                 if (u >= 1) return false;
+                if (u < 0) {
+                    // Waiting for its turn
+                    fx.plainText(c, L.ch, L.x, L.y, L.size, Fx.alpha(fx.labelColor(), s), 0, 1);
+                    return true;
+                }
                 final float sec = (t - t0) / 1000f;
                 for (int i = 0; i < 4; i++) {
                     c.save();

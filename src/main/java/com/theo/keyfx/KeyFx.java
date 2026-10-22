@@ -426,11 +426,13 @@ public final class KeyFx extends Drawable {
         }
     }
 
-    public void deleteTap(FxKey k, FxLetter letter) {
+    /** Backspace tapped once; letters is what it deleted, in text order (none, one, or a whole word). */
+    public void deleteTap(FxKey k, FxLetter... letters) {
         if (!enabled || k == null) return;
+        final FxLetter[] list = letters != null ? letters : new FxLetter[0];
         for (FxModule m : modules) {
             try {
-                m.onDeleteTap(k, letter);
+                m.onDeleteTap(k, list);
             } catch (Throwable e) {
                 fail(m, e);
             }
