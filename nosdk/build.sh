@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 # Builds the FUTO Tweaks APK without the Android SDK or Gradle.
 #
-# Toolchain (all from GitHub releases):
+# Toolchain (all from GitHub):
 #   APKTOOL_JAR  apktool 2.12.1, for its bundled aapt2 and android-framework.jar
 #   DX_JAR       dx-30.0.2.jar from dex2jar 2.4, converts .class to classes.dex
 #   SIGNER_JAR   uber-apk-signer 1.3.0, zipalign and v1/v2/v3 signing
+#   ANDROID_JAR  optional: the SDK's android.jar for API 35. Downloaded and checksum
+#                verified when not given.
 #
 # Optional signing with your own key (otherwise uber-apk-signer's debug key is used):
 #   KS_FILE, KS_ALIAS, KS_PASS, KS_KEY_PASS
 #
-# Java sources are compiled against hand-written stubs in nosdk/stubs, which are never
-# packaged: on the phone the real framework and the LSPosed/Vector Xposed API provide them.
+# Java sources are compiled against android.jar and the Xposed API stubs in nosdk/stubs.
+# Neither is packaged: on the phone the real framework and LSPosed/Vector provide them.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$HERE/../app/src/main"
+KEYFX="$HERE/../keyfx/src/main/java"
 OUT="$HERE/out"
 : "${APKTOOL_JAR:?}" "${DX_JAR:?}" "${SIGNER_JAR:?}"
 
@@ -21,18 +24,29 @@ PACKAGE="com.theo.futotweaks"
 VERSION_CODE="${VERSION_CODE:-1}"
 VERSION_NAME="${VERSION_NAME:-1.0.0}"
 
+ANDROID_JAR_URL="https://raw.githubusercontent.com/Sable/android-platforms/master/android-35/android.jar"
+ANDROID_JAR_SHA256="4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b"
+
 rm -rf "$OUT" && mkdir -p "$OUT"/{tools,stubs-classes,classes,res-compiled,apk}
+
+# The public API jar from SDK platform 35 (compile only)
+if [ -z "${ANDROID_JAR:-}" ]; then
+    ANDROID_JAR="$OUT/tools/android.jar"
+    curl -sSfL -o "$ANDROID_JAR" "$ANDROID_JAR_URL"
+fi
+echo "$ANDROID_JAR_SHA256  $ANDROID_JAR" | sha256sum -c --quiet -
 
 # aapt2 and the framework resource table, out of apktool
 ( cd "$OUT/tools" && unzip -q -o "$APKTOOL_JAR" prebuilt/linux/aapt2_64 prebuilt/android-framework.jar )
 AAPT2="$OUT/tools/prebuilt/linux/aapt2_64"; chmod +x "$AAPT2"
 FRAMEWORK="$OUT/tools/prebuilt/android-framework.jar"
 
-# Compile stubs, then app sources against them (Java 8 bytecode, the newest dx reads)
-javac --release 8 -nowarn -d "$OUT/stubs-classes" $(find "$HERE/stubs" -name '*.java')
-javac --release 8 -Xlint:-options -cp "$OUT/stubs-classes" -d "$OUT/classes" $(find "$APP/java" -name '*.java')
+# Compile the Xposed stubs, then the app and keyfx sources (Java 8 bytecode, the newest dx reads)
+javac --release 8 -nowarn -cp "$ANDROID_JAR" -d "$OUT/stubs-classes" $(find "$HERE/stubs" -name '*.java')
+javac --release 8 -Xlint:-options -cp "$ANDROID_JAR:$OUT/stubs-classes" -d "$OUT/classes" \
+    $(find "$APP/java" "$KEYFX" -name '*.java')
 
-# Only the app classes become classes.dex
+# Only the app and keyfx classes become classes.dex
 java -cp "$DX_JAR" com.android.dx.command.Main --dex --min-sdk-version=26 \
     --output="$OUT/apk/classes.dex" "$OUT/classes"
 
