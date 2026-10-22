@@ -82,7 +82,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static BroadcastReceiver sReloadReceiver;
 
     // The module's own features, refreshed whenever settings change
-    private static boolean sVerticalCursor, sCursorHaptics, sHideNavBar;
+    private static boolean sVerticalCursor, sCursorHaptics, sHideNavBar, sHoldWords;
+    private static int sWordsAfter = 8;
+    private static long sWordPaceMs = 220;
     private static boolean sAnimationsOn = true;
     private static long sLongPressMs = 300;
 
@@ -116,6 +118,13 @@ public class MainHook implements IXposedHookLoadPackage {
     // Points from touch-down until FUTO confirms a swipe: layer x, y and time
     private static final ArrayList<float[]> sSwipeBuffer = new ArrayList<>();
     private static long sSwipeBase;
+
+    // Backspace: text before the cursor and where its letters were, read before FUTO deletes
+    private static String sDelBefore;
+    private static FxLetter[] sDelLetters;
+    // Backspace hold: single deletes so far, and when the last whole word went
+    private static int sHoldDeletes;
+    private static long sLastWordAt;
 
     // Input connection classes already hooked for reading the swiped word
     private static final Set<Class<?>> sHookedConnections = new HashSet<>();
@@ -164,6 +173,9 @@ public class MainHook implements IXposedHookLoadPackage {
         sVerticalCursor = sPrefs.getBoolean(Prefs.key(Prefs.VERTICAL_CURSOR), true);
         sCursorHaptics = sPrefs.getBoolean(Prefs.key(Prefs.CURSOR_HAPTICS), true);
         sHideNavBar = sPrefs.getBoolean(Prefs.key(Prefs.HIDE_NAV_BAR), true);
+        sHoldWords = sPrefs.getBoolean(Prefs.key(Prefs.HOLD_WORDS), true);
+        sWordsAfter = Math.round(sPrefs.getFloat(Prefs.key(Prefs.WORDS_AFTER), 8));
+        sWordPaceMs = Math.round(sPrefs.getFloat(Prefs.key(Prefs.WORD_PACE), 220));
     }
 
     /** FUTO's own long-press delay (user adjustable in its settings), read from fields only. */
@@ -724,22 +736,34 @@ public class MainHook implements IXposedHookLoadPackage {
         hookAll(legacy, "onCodeInput", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(final MethodHookParam param) {
+                sDelBefore = null;
+                if (param.args.length < 4) return;
+                final int code = (Integer) param.args[0];
+                if (code != KeyMap.CODE_DELETE) return;
+                try {
+                    beforeDelete(param, (Boolean) param.args[3]);
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + "backspace handling failed: " + t);
+                }
+            }
+
+            @Override
+            protected void afterHookedMethod(final MethodHookParam param) {
                 final KeyFx fx = sFx;
                 if (fx == null || !fx.isEnabled() || param.args.length < 4) return;
                 final int code = (Integer) param.args[0];
                 final boolean repeat = (Boolean) param.args[3];
-                // Read the letter before FUTO deletes it
-                FxLetter letter = null;
-                if (code == KeyMap.CODE_DELETE && sIme != null) {
-                    final View view = sKeyboardView.get();
-                    letter = Caret.letterBeforeCursor(sIme.getCurrentInputConnection(),
-                            view != null ? view.getRootView() : null);
+                // Backspace: whatever FUTO actually removed, one letter or a whole word
+                FxLetter[] deleted = null;
+                if (code == KeyMap.CODE_DELETE && sDelBefore != null && sIme != null) {
+                    final String after = Caret.textBefore(sIme.getCurrentInputConnection());
+                    deleted = deletedLetters(Caret.deletedLength(sDelBefore, after));
                 }
-                final FxLetter deleted = letter;
+                final FxLetter[] letters = deleted;
                 post(new SafeRunnable() {
                     @Override
                     void safeRun() {
-                        onKeyTyped(fx, code, repeat, deleted);
+                        onKeyTyped(fx, code, repeat, letters);
                     }
                 });
             }
@@ -813,10 +837,93 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     /**
-     * A key was typed. Backspace's first press is a tap; FUTO's repeats while it is held
-     * become the hold, with each deleted letter flying into the key.
+     * Before FUTO handles backspace: note the text and where its letters are, so the effects can
+     * use exactly what gets deleted. Once a hold has deleted enough single letters, take over the
+     * repeats and delete a whole word at a steady pace instead.
      */
-    private static void onKeyTyped(final KeyFx fx, final int code, final boolean repeat, final FxLetter deleted) {
+    private static void beforeDelete(final XC_MethodHook.MethodHookParam param, final boolean repeat) throws Throwable {
+        if (!repeat) {
+            sHoldDeletes = 0;
+            sLastWordAt = 0;
+        }
+        final InputMethodService ime = sIme;
+        if (ime == null) return;
+        final InputConnection ic = ime.getCurrentInputConnection();
+        final KeyFx fx = sFx;
+        final boolean wantEffects = fx != null && fx.isEnabled();
+        final boolean words = repeat && sHoldWords && sHoldDeletes >= sWordsAfter;
+        if (!wantEffects && !words) {
+            if (repeat) sHoldDeletes++;
+            return;
+        }
+        final String before = Caret.textBefore(ic);
+        sDelBefore = before;
+        if (wantEffects) {
+            final View view = sKeyboardView.get();
+            sDelLetters = Caret.lettersBefore(before, Caret.WINDOW, view != null ? view.getRootView() : null);
+        }
+        if (!words) {
+            if (repeat) sHoldDeletes++;
+            return;
+        }
+
+        // Word mode: FUTO's repeats come faster than words should go, so most are skipped
+        param.setResult(null);
+        final long now = android.os.SystemClock.uptimeMillis();
+        if (now - sLastWordAt < sWordPaceMs || before == null) return;
+        sLastWordAt = now;
+        // Delete through FUTO itself, one press at a time, so its own word tracking stays right.
+        // Stops early if FUTO removes more per press (a whole swiped word, say).
+        final int target = wordLength(before);
+        for (int i = 0; i < target; i++) {
+            XposedBridge.invokeOriginalMethod(param.method, param.thisObject, param.args);
+            final String now2 = Caret.textBefore(ic);
+            if (now2 == null || Caret.deletedLength(before, now2) >= target || now2.equals(before)) break;
+        }
+    }
+
+    /** Chars to delete for one word back: spaces, then the word (or a run of punctuation, or one line break). */
+    private static int wordLength(final String text) {
+        int i = text.length();
+        while (i > 0 && text.charAt(i - 1) == ' ') i--;
+        if (i == 0) return text.length();
+        final char last = text.charAt(i - 1);
+        if (last == '\n') return text.length() - i + 1;
+        final boolean word = isWordChar(last);
+        while (i > 0) {
+            final char c = text.charAt(i - 1);
+            if (c == ' ' || c == '\n' || isWordChar(c) != word) break;
+            i--;
+        }
+        return text.length() - i;
+    }
+
+    private static boolean isWordChar(final char c) {
+        return Character.isLetterOrDigit(c) || c == '\'' || c == '\u2019' || Character.isSurrogate(c);
+    }
+
+    /** The positioned letters for the last deleted chars, in text order, without line breaks. */
+    private static FxLetter[] deletedLetters(final int chars) {
+        final FxLetter[] all = sDelLetters;
+        final String before = sDelBefore;
+        if (all == null || before == null || chars <= 0) return new FxLetter[0];
+        final String tail = before.substring(Math.max(0, before.length() - chars));
+        final int n = Math.min(all.length, tail.codePointCount(0, tail.length()));
+        final ArrayList<FxLetter> out = new ArrayList<>();
+        for (int i = all.length - n; i < all.length; i++) {
+            final FxLetter l = all[i];
+            // A lone deleted space shows as a dot; inside a word deletion it's just a gap
+            if (l == null || (n > 1 && "\u00B7".equals(l.ch))) continue;
+            out.add(l);
+        }
+        return out.toArray(new FxLetter[0]);
+    }
+
+    /**
+     * A key was typed. Backspace's first press is a tap; FUTO's repeats while it is held
+     * become the hold, with each deleted letter flying into the key, word deletions included.
+     */
+    private static void onKeyTyped(final KeyFx fx, final int code, final boolean repeat, final FxLetter[] deleted) {
         final FxLayout layout = fx.layout();
         final FxKey key = KeyMap.findByCode(layout, code, sDownX, sDownY);
         if (key == null) return;
@@ -829,7 +936,8 @@ public class MainHook implements IXposedHookLoadPackage {
                     sDeleteHolding = true;
                     fx.deleteHoldStart(key);
                 }
-                fx.deleteHoldLetter(deleted);
+                // Right to left, the order they were deleted in
+                if (deleted != null) for (int i = deleted.length - 1; i >= 0; i--) fx.deleteHoldLetter(deleted[i]);
             }
             return;
         }

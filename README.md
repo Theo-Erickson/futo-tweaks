@@ -9,14 +9,18 @@ keyboard at runtime, so you keep using the official FUTO app and its updates.
   Once a drag goes mostly vertical, the module takes it over and moves by line vertically and
   by character sideways. Short or sideways drags stay with FUTO, so its normal cursor drag,
   language swipe and long press keep working.
+- **Hold backspace for whole words:** after a few single letters (adjustable), a held
+  backspace deletes a word at a time, at a pace you set. It deletes through FUTO's own
+  backspace, so FUTO's word tracking stays correct.
 - **Hide the keyboard navigation bar:** removes the down arrow and keyboard switcher below
   the keys (Android 15 or newer).
 - **Effects**, all from the FUTO Tweaks Lab, each with its own settings:
   - Typing: key pop, letter float (rise, grow or ghost key), heat streak, neighbor wave.
   - Special keys: enter sweep; spacebar stars, puff or shimmer; backspace fire, slash or
-    shatter, with the deleted letter burning, splitting or shattering too.
+    shatter, with the deleted letters burning, splitting or shattering too. When one press
+    removes a whole word (like undoing a swiped word), every letter gets the effect.
   - Backspace hold: the key becomes a black hole, lava, an opening box or a hole, and the
-    deleted letters swirl, fly on curves, or get one press each.
+    deleted letters swirl, fly on curves, or get one press each. Whole words count every letter.
   - Swipe trail: key trace, comet, ink brush, stardust.
   - Swipe word: letter hop on the number row (or the top row without one), constellation,
     commit burst, with letter picking by turns, pauses or every key crossed.

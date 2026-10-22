@@ -32,12 +32,18 @@ public final class Prefs {
     public static final String VERTICAL_CURSOR = "verticalCursor";
     public static final String CURSOR_HAPTICS = "cursorHaptics";
     public static final String HIDE_NAV_BAR = "hideNavBar";
+    public static final String HOLD_WORDS = "holdWords";
+    public static final String WORDS_AFTER = "wordsAfter";
+    public static final String WORD_PACE = "wordPace";
 
-    public static final Section KEYBOARD_SECTION = new Section(KEYBOARD, "Keyboard", -10, "Cursor and navigation bar",
+    public static final Section KEYBOARD_SECTION = new Section(KEYBOARD, "Keyboard", -10, "Cursor, backspace and navigation bar",
             "Changes to how FUTO Keyboard itself behaves.", false, true,
             Field.toggle(VERTICAL_CURSOR, "Drag spacebar up and down to change lines", true),
             Field.toggle(CURSOR_HAPTICS, "Vibrate on each cursor step", true).when(VERTICAL_CURSOR, "true"),
-            Field.toggle(HIDE_NAV_BAR, "Hide keyboard navigation bar (Android 15+)", true));
+            Field.toggle(HIDE_NAV_BAR, "Hide keyboard navigation bar (Android 15+)", true),
+            Field.toggle(HOLD_WORDS, "Holding backspace deletes whole words", true),
+            Field.range(WORDS_AFTER, "Switch to words after", 1, 30, 1, "letters", 8).when(HOLD_WORDS, "true"),
+            Field.range(WORD_PACE, "Time per word", 80, 600, 10, "ms", 220).when(HOLD_WORDS, "true"));
 
     public static String key(String field) {
         return KEYBOARD + "." + field;
