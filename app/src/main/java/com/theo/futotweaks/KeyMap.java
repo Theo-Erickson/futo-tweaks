@@ -1,95 +1,92 @@
 package com.theo.futotweaks;
 
+import android.graphics.RectF;
 import android.view.View;
+
+import com.theo.keyfx.FxKey;
+import com.theo.keyfx.FxLayout;
 
 import java.util.List;
 
 import de.robv.android.xposed.XposedHelpers;
 
 /**
- * A snapshot of the current FUTO layout's keys, in keyboard view coordinates.
+ * Builds keyfx's view of the current FUTO layout, in layer coordinates (the IME window root).
  *
  * Built from fields only (KeyboardView.mKeyboard, Keyboard.mSortedKeys and the Key
  * data class fields), never from FUTO methods. Release builds run R8, which can inline
  * small methods away, but fields that the keyboard itself reads always survive.
  *
- * Rebuilt only when the keyboard object changes (layout switch, shift, resize), so
- * hit testing during a swipe is a plain loop over ~40 cached rectangles.
+ * Rebuilt only when the keyboard object or the view's position changes (layout switch,
+ * shift, resize), so hit testing during a swipe is a plain loop over ~40 cached rectangles.
  */
 final class KeyMap {
     private KeyMap() {}
 
-    /** One key: visual bounds (where it is drawn) and hit bounds (its full cell, gaps included). */
-    static final class KeyInfo {
-        int code;
-        String label;
-        boolean hasLongPress;
-        float left, top, right, bottom;
-        float hitLeft, hitTop, hitRight, hitBottom;
+    // FUTO key codes, inherited unchanged from AOSP LatinIME's Constants
+    static final int CODE_SPACE = ' ';
+    static final int CODE_ENTER = '\n';
+    static final int CODE_DELETE = -5;
+    static final int CODE_SHIFT = -1;
 
-        float centerX() { return (left + right) * 0.5f; }
-        float centerY() { return (top + bottom) * 0.5f; }
-        float width() { return right - left; }
-        float height() { return bottom - top; }
-
-        /** The single character this key types, or null for keys like shift or "?123". */
-        String glyph() {
-            if (label != null && label.codePointCount(0, label.length()) == 1) return label;
-            if (code > 32 && Character.isValidCodePoint(code)) return new String(Character.toChars(code));
-            return null;
-        }
-
-        boolean isLetter() {
-            final String g = glyph();
-            return g != null && Character.isLetter(g.codePointAt(0));
-        }
-    }
-
-    private static final KeyInfo[] EMPTY = new KeyInfo[0];
     private static Object sKeyboard;
-    private static KeyInfo[] sKeys = EMPTY;
+    private static float sOffX = Float.NaN, sOffY = Float.NaN;
+    private static int sWidth, sHeight;
+    private static FxLayout sLayout = FxLayout.EMPTY;
 
-    /** Current keys, rebuilding the cache if the layout changed. Never null. */
-    static KeyInfo[] keys(final View view) {
+    /**
+     * The current layout, rebuilding the cache if anything changed. offX and offY are where the
+     * keyboard view sits in the layer. Never null.
+     */
+    static FxLayout layout(final View view, final float offX, final float offY) {
         final Object keyboard;
         try {
             keyboard = XposedHelpers.getObjectField(view, "mKeyboard");
         } catch (Throwable t) {
-            return EMPTY;
+            return FxLayout.EMPTY;
         }
-        if (keyboard == null) return EMPTY;
-        if (keyboard != sKeyboard) {
-            sKeys = build(view, keyboard);
+        if (keyboard == null) return FxLayout.EMPTY;
+        if (keyboard != sKeyboard || offX != sOffX || offY != sOffY
+                || view.getWidth() != sWidth || view.getHeight() != sHeight) {
+            sLayout = build(view, keyboard, offX, offY);
             sKeyboard = keyboard;
+            sOffX = offX;
+            sOffY = offY;
+            sWidth = view.getWidth();
+            sHeight = view.getHeight();
         }
-        return sKeys;
+        return sLayout;
     }
 
-    private static KeyInfo[] build(final View view, final Object keyboard) {
+    private static FxLayout build(final View view, final Object keyboard, final float offX, final float offY) {
+        final RectF kb = new RectF(offX, offY, offX + view.getWidth(), offY + view.getHeight());
+        // FUTO's suggestion strip sits right above the keys, in the same window
+        final float barH = 48 * view.getResources().getDisplayMetrics().density;
+        final RectF bar = offY >= barH * 0.8f ? new RectF(offX, offY - barH, kb.right, offY) : new RectF();
+
         final List<?> list;
         try {
             list = (List<?>) XposedHelpers.getObjectField(keyboard, "mSortedKeys");
         } catch (Throwable t) {
-            return EMPTY;
+            return new FxLayout(new FxKey[0], kb, bar);
         }
-        if (list == null) return EMPTY;
+        if (list == null) return new FxLayout(new FxKey[0], kb, bar);
 
-        final int padLeft = view.getPaddingLeft();
-        final int padTop = view.getPaddingTop();
-        final KeyInfo[] out = new KeyInfo[list.size()];
+        final float padLeft = view.getPaddingLeft() + offX;
+        final float padTop = view.getPaddingTop() + offY;
+        final FxKey[] out = new FxKey[list.size()];
         int n = 0;
         for (final Object key : list) {
             try {
-                if (boolField(key, "isSpacer", false)) continue;
-                final KeyInfo k = new KeyInfo();
+                if (boolField(key, "isSpacer")) continue;
+                final FxKey k = new FxKey();
                 k.code = XposedHelpers.getIntField(key, "code");
-                k.label = (String) XposedHelpers.getObjectField(key, "label");
+                k.label = (String) fieldOrNull(key, "label");
                 final int x = XposedHelpers.getIntField(key, "x");
                 final int y = XposedHelpers.getIntField(key, "y");
                 final int w = XposedHelpers.getIntField(key, "width");
                 final int h = XposedHelpers.getIntField(key, "height");
-                final int hGap = intField(key, "horizontalGap", 0);
-                final int vGap = intField(key, "verticalGap", 0);
+                final int hGap = intField(key, "horizontalGap");
 
                 // Matches KeyboardView.getKeyDrawOffsetAndSize for the default gap config
                 k.left = padLeft + x + hGap / 2;
@@ -97,39 +94,46 @@ final class KeyMap {
                 k.right = k.left + w;
                 k.bottom = k.top + h;
 
-                k.hitLeft = padLeft + x;
-                k.hitTop = padTop + y;
-                k.hitRight = k.hitLeft + w + hGap;
-                k.hitBottom = k.hitTop + h + vGap;
-
+                k.type = typeOf(k.code, k.label);
                 final Object more = fieldOrNull(key, "moreKeys");
-                k.hasLongPress = (more instanceof List && !((List<?>) more).isEmpty()) || k.code == ' ';
+                k.longPress = (more instanceof List && !((List<?>) more).isEmpty()) || k.code == CODE_SPACE;
                 out[n++] = k;
             } catch (Throwable ignored) {
                 // A key we can't read is just skipped, the rest still work
             }
         }
-        final KeyInfo[] trimmed = new KeyInfo[n];
-        System.arraycopy(out, 0, trimmed, 0, n);
-        return trimmed;
+        final FxKey[] keys = new FxKey[n];
+        System.arraycopy(out, 0, keys, 0, n);
+        return new FxLayout(keys, kb, bar);
     }
 
-    /** The key whose cell contains (x, y) in keyboard view coordinates, or null. */
-    static KeyInfo hit(final View view, final float x, final float y) {
-        for (final KeyInfo k : keys(view)) {
-            if (x >= k.hitLeft && x < k.hitRight && y >= k.hitTop && y < k.hitBottom) return k;
+    private static int typeOf(final int code, final String label) {
+        switch (code) {
+            case CODE_SPACE: return FxKey.SPACE;
+            case CODE_ENTER: return FxKey.ENTER;
+            case CODE_DELETE: return FxKey.DELETE;
+            case CODE_SHIFT: return FxKey.SHIFT;
+            default:
+                if (code >= '0' && code <= '9') return FxKey.NUM;
+                return code > CODE_SPACE ? FxKey.CHAR : FxKey.OTHER;
         }
-        return null;
     }
 
-    /** The key that types this code, preferring the one nearest (nearX, nearY). Null if none. */
-    static KeyInfo findByCode(final View view, final int code, final float nearX, final float nearY) {
-        KeyInfo best = null;
+    /** The key that types this code, preferring the one nearest (x, y). Capitals match their letter. */
+    static FxKey findByCode(final FxLayout layout, final int code, final float x, final float y) {
+        FxKey k = nearest(layout, code, x, y);
+        if (k == null && Character.isValidCodePoint(code) && Character.isUpperCase(code)) {
+            k = nearest(layout, Character.toLowerCase(code), x, y);
+        }
+        return k;
+    }
+
+    private static FxKey nearest(final FxLayout layout, final int code, final float x, final float y) {
+        FxKey best = null;
         float bestDist = Float.MAX_VALUE;
-        for (final KeyInfo k : keys(view)) {
+        for (final FxKey k : layout.keys) {
             if (k.code != code) continue;
-            final float dx = k.centerX() - nearX, dy = k.centerY() - nearY;
-            final float d = dx * dx + dy * dy;
+            final float dx = k.cx() - x, dy = k.cy() - y, d = dx * dx + dy * dy;
             if (d < bestDist) {
                 bestDist = d;
                 best = k;
@@ -138,19 +142,19 @@ final class KeyMap {
         return best;
     }
 
-    private static int intField(final Object obj, final String name, final int fallback) {
+    private static int intField(final Object obj, final String name) {
         try {
             return XposedHelpers.getIntField(obj, name);
         } catch (Throwable t) {
-            return fallback;
+            return 0;
         }
     }
 
-    private static boolean boolField(final Object obj, final String name, final boolean fallback) {
+    private static boolean boolField(final Object obj, final String name) {
         try {
             return XposedHelpers.getBooleanField(obj, name);
         } catch (Throwable t) {
-            return fallback;
+            return false;
         }
     }
 

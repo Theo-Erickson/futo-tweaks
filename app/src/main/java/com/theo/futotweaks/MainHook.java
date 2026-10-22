@@ -1,13 +1,15 @@
 package com.theo.futotweaks;
 
 import android.animation.ValueAnimator;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.inputmethodservice.InputMethodService;
 import android.os.Build;
-import android.os.SystemClock;
+import android.os.Looper;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -17,12 +19,16 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.inputmethod.InputConnection;
 
+import com.theo.keyfx.FxKey;
+import com.theo.keyfx.FxLayout;
+import com.theo.keyfx.FxLetter;
+import com.theo.keyfx.KeyFx;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -39,9 +45,12 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * R8 cannot remove:
  *  - framework classes (InputMethodService, the input connection's own class),
  *  - methods called through an interface with several implementations
- *    (KeyboardActionListener on LatinIMELegacy, DrawingProxy.onKeyPressed),
+ *    (KeyboardActionListener on LatinIMELegacy),
  *  - View overrides (MainKeyboardView.onTouchEvent) and constructors,
  *  - fields the keyboard itself reads (see KeyMap).
+ *
+ * The effects themselves live in keyfx (KeyFx and its modules), which knows nothing about FUTO
+ * or Xposed. This class only translates FUTO's events into keyfx events.
  *
  * Every hook installs on its own and every handler catches its own errors, so if a FUTO
  * update breaks one feature the others keep working, and typing is never interrupted.
@@ -57,41 +66,30 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final String KEYBOARD_VIEW = "org.futo.inputmethod.keyboard.MainKeyboardView";
     private static final String LEGACY_IME = "org.futo.inputmethod.latin.LatinIMELegacy";
     private static final String SETTINGS = "org.futo.inputmethod.latin.settings.Settings";
-    private static final String LAYER_FIELD = "futoTweaksLayer";
-
-    // FUTO key codes, inherited unchanged from AOSP LatinIME's Constants
-    private static final int CODE_SPACE = ' ';
-    private static final int CODE_ENTER = '\n';
-    private static final int CODE_DELETE = -5;
+    private static final String FX_FIELD = "futoTweaksFx";
 
     // Spacebar drag tuning, in dp
     private static final float ACTIVATE_DP = 20f;  // vertical travel before the drag takes over
     private static final float LINE_STEP_DP = 24f; // smaller than a key row: little room below the spacebar
     private static final float CHAR_STEP_DP = 16f; // matches FUTO's own horizontal step
-    private static final float TRAIL_START_DP = 12f;
-    private static final float RING_SLOP_DP = 10f; // movement that cancels a long-press charge
-
-    // How long after a swipe ends to wait for its word before the hop forms without one
-    private static final long WORD_WAIT_MS = 900;
+    private static final float HOLD_SLOP_DP = 10f; // movement that cancels a long-press charge
 
     private static XSharedPreferences sPrefs;
     private static ClassLoader sClassLoader;
     private static InputMethodService sIme;
     private static WeakReference<View> sKeyboardView = new WeakReference<>(null);
+    private static KeyFx sFx;
+    private static BroadcastReceiver sReloadReceiver;
 
-    // Cached settings, refreshed whenever the keyboard window opens
+    // The module's own features, refreshed whenever settings change
     private static boolean sVerticalCursor, sCursorHaptics, sHideNavBar;
-    private static boolean sPop, sLetterFloat, sHeat, sSpecialKeys;
-    private static boolean sKeyTrace, sLetterHop, sChargeRing, sTrackpad, sCascade;
-    private static boolean sRipple, sGlow, sParticles, sTrail;
-    private static boolean sAnyEffect;
     private static boolean sAnimationsOn = true;
     private static long sLongPressMs = 300;
 
-    // Keyboard view position inside the IME window, updated at every touch-down and key event
+    // Keyboard view position in the layer (the IME window root), updated at every touch-down
     private static final int[] sLoc = new int[2], sRootLoc = new int[2];
     private static float sOffX, sOffY;
-    private static float sLastDownX, sLastDownY;
+    private static float sDownX, sDownY;
 
     /** State of the current spacebar drag. Only one keyboard view exists at a time. */
     private static final class SpaceDrag {
@@ -99,29 +97,25 @@ public class MainHook implements IXposedHookLoadPackage {
         boolean active;       // we took the drag over from FUTO
         boolean futoCursor;   // FUTO's own horizontal cursor drag is running
         boolean composingDone;
-        boolean trailStarted;
         int pointerId;
         float downX, downY, anchorX, anchorY;
 
         void reset() {
-            tracking = active = futoCursor = composingDone = trailStarted = false;
+            tracking = active = futoCursor = composingDone = false;
+        }
+
+        boolean cursorMode() {
+            return active || futoCursor;
         }
     }
 
     private static final SpaceDrag sDrag = new SpaceDrag();
 
-    // Swipe typing state
-    private static final ArrayList<KeyMap.KeyInfo> sSwipeKeys = new ArrayList<>();
-    private static KeyMap.KeyInfo sLastSwipeKey;
-    private static volatile boolean sGestureActive;
-    private static volatile long sWordDeadline;
-    private static volatile EffectsLayer.Hop sHop;
-    private static volatile String sHopFirstGlyph;
-    // UI thread only: true once the buffered keys were flushed into the hop for this swipe
-    private static boolean sSwipeFlushed;
-
-    // Long-press charge ring for the primary pointer
-    private static EffectsLayer.ChargeRing sRing;
+    // Primary finger: the long-press charge, a potential swipe, and a held backspace
+    private static boolean sCharging, sSwiping, sDeleteHolding;
+    // Points from touch-down until FUTO confirms a swipe: layer x, y and time
+    private static final ArrayList<float[]> sSwipeBuffer = new ArrayList<>();
+    private static long sSwipeBase;
 
     // Input connection classes already hooked for reading the swiped word
     private static final Set<Class<?>> sHookedConnections = new HashSet<>();
@@ -132,54 +126,44 @@ public class MainHook implements IXposedHookLoadPackage {
 
         sClassLoader = lpparam.classLoader;
         sPrefs = new XSharedPreferences(Prefs.MODULE_PACKAGE, Prefs.FILE);
-        refreshPrefs();
+        readHostPrefs();
 
         hookImeService();
         hookKeyboardViewCreation(lpparam.classLoader);
         hookKeyboardTouches(lpparam.classLoader);
-        hookKeyPresses(lpparam.classLoader);
         hookKeyboardActions(lpparam.classLoader);
     }
 
-    // region Settings
+    // region Settings and live reload
 
-    private static void refreshPrefs() {
+    /** Re-reads settings if the file changed (or always, when forced by the settings screen). */
+    private static void refreshPrefs(final boolean force) {
+        boolean changed = force;
         try {
-            if (sPrefs.hasFileChanged()) sPrefs.reload();
+            if (!changed) changed = sPrefs.hasFileChanged();
         } catch (Throwable ignored) {
-            // Older framework builds may not support change detection, reload unconditionally
-            sPrefs.reload();
+            // Older framework builds may not support change detection
+            changed = true;
         }
-        sVerticalCursor = get(Prefs.VERTICAL_CURSOR);
-        sCursorHaptics = get(Prefs.CURSOR_HAPTICS);
-        sHideNavBar = get(Prefs.HIDE_NAV_BAR);
-        sPop = get(Prefs.EFFECT_POP);
-        sLetterFloat = get(Prefs.EFFECT_LETTER_FLOAT);
-        sHeat = get(Prefs.EFFECT_HEAT);
-        sSpecialKeys = get(Prefs.EFFECT_SPECIAL_KEYS);
-        sKeyTrace = get(Prefs.EFFECT_KEY_TRACE);
-        sLetterHop = get(Prefs.EFFECT_LETTER_HOP);
-        sChargeRing = get(Prefs.EFFECT_CHARGE_RING);
-        sTrackpad = get(Prefs.EFFECT_TRACKPAD);
-        sCascade = get(Prefs.EFFECT_CASCADE);
-        sRipple = get(Prefs.EFFECT_RIPPLE);
-        sGlow = get(Prefs.EFFECT_GLOW);
-        sParticles = get(Prefs.EFFECT_PARTICLES);
-        sTrail = get(Prefs.EFFECT_TRAIL);
-        sAnyEffect = sPop || sLetterFloat || sHeat || sSpecialKeys || sKeyTrace || sLetterHop
-                || sChargeRing || sTrackpad || sCascade || sRipple || sGlow || sParticles || sTrail;
-
+        if (changed) {
+            sPrefs.reload();
+            readHostPrefs();
+            if (sFx != null) sFx.reload();
+        }
         // Respect Android's "Remove animations" accessibility setting
         try {
             sAnimationsOn = ValueAnimator.areAnimatorsEnabled();
         } catch (Throwable t) {
             sAnimationsOn = true;
         }
+        if (sFx != null) sFx.setEnabled(sAnimationsOn);
         sLongPressMs = readLongPressTimeout();
     }
 
-    private static boolean get(final String key) {
-        return sPrefs.getBoolean(key, Prefs.defaultFor(key));
+    private static void readHostPrefs() {
+        sVerticalCursor = sPrefs.getBoolean(Prefs.key(Prefs.VERTICAL_CURSOR), true);
+        sCursorHaptics = sPrefs.getBoolean(Prefs.key(Prefs.CURSOR_HAPTICS), true);
+        sHideNavBar = sPrefs.getBoolean(Prefs.key(Prefs.HIDE_NAV_BAR), true);
     }
 
     /** FUTO's own long-press delay (user adjustable in its settings), read from fields only. */
@@ -196,45 +180,71 @@ public class MainHook implements IXposedHookLoadPackage {
         return 300;
     }
 
-    private static boolean effectsOn() {
-        return sAnyEffect && sAnimationsOn;
+    /**
+     * The settings screen broadcasts after every change, so edits show up while the keyboard
+     * is open. Anyone may send it, but all it does is re-read the settings file.
+     */
+    private static void registerReloadReceiver(final Context context) {
+        if (sReloadReceiver != null) return;
+        sReloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(final Context c, final Intent intent) {
+                try {
+                    refreshPrefs(true);
+                    if (sIme != null) applyNavBar(sIme);
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + "settings reload failed: " + t);
+                }
+            }
+        };
+        try {
+            final IntentFilter filter = new IntentFilter(Prefs.ACTION_RELOAD);
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.registerReceiver(sReloadReceiver, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                context.registerReceiver(sReloadReceiver, filter);
+            }
+        } catch (Throwable t) {
+            sReloadReceiver = null;
+            XposedBridge.log(TAG + "live reload unavailable, settings apply when the keyboard reopens: " + t);
+        }
     }
 
     // endregion
 
     // region Effects layer and coordinates
 
-    /** The effects layer on the IME window's root overlay, created on first use. */
-    private static EffectsLayer layerFor(final View keyboardView) {
+    /** The effects engine on the IME window's root overlay, created on first use. */
+    private static KeyFx fxFor(final View keyboardView) {
         final View root = keyboardView.getRootView();
-        EffectsLayer layer = (EffectsLayer) XposedHelpers.getAdditionalInstanceField(root, LAYER_FIELD);
-        if (layer == null) {
-            layer = new EffectsLayer(keyboardView.getResources().getDisplayMetrics().density);
-            layer.setAccent(accentColor(keyboardView.getContext()));
-            root.getOverlay().add(layer);
-            XposedHelpers.setAdditionalInstanceField(root, LAYER_FIELD, layer);
+        KeyFx fx = (KeyFx) XposedHelpers.getAdditionalInstanceField(root, FX_FIELD);
+        if (fx == null) {
+            fx = new KeyFx(keyboardView.getResources().getDisplayMetrics().density, sPrefs, Prefs.CAPS);
+            try {
+                fx.setSystemAccent(keyboardView.getContext().getColor(android.R.color.system_accent1_300));
+            } catch (Throwable ignored) {
+                // No Material You palette: keyfx keeps its default blue
+            }
+            fx.setEnabled(sAnimationsOn);
+            root.getOverlay().add(fx);
+            XposedHelpers.setAdditionalInstanceField(root, FX_FIELD, fx);
         }
-        if (layer.getBounds().width() != root.getWidth() || layer.getBounds().height() != root.getHeight()) {
-            layer.setBounds(0, 0, root.getWidth(), root.getHeight());
+        sFx = fx;
+        if (fx.getBounds().width() != root.getWidth() || fx.getBounds().height() != root.getHeight()) {
+            fx.setBounds(0, 0, root.getWidth(), root.getHeight());
         }
-        return layer;
+        return fx;
     }
 
-    /** Records where the keyboard view sits in the window, to convert view to layer coordinates. */
-    private static void updateOffset(final View view) {
+    /** Records where the keyboard view sits in the window, and refreshes the layout for keyfx. */
+    private static FxLayout updateLayout(final View view, final KeyFx fx) {
         view.getLocationInWindow(sLoc);
         view.getRootView().getLocationInWindow(sRootLoc);
         sOffX = sLoc[0] - sRootLoc[0];
         sOffY = sLoc[1] - sRootLoc[1];
-    }
-
-    /** The system Material You accent, so effects match the wallpaper-based theme. */
-    private static int accentColor(final Context context) {
-        try {
-            return context.getColor(android.R.color.system_accent1_300);
-        } catch (Throwable t) {
-            return Color.WHITE;
-        }
+        final FxLayout layout = KeyMap.layout(view, sOffX, sOffY);
+        fx.setLayout(layout);
+        return layout;
     }
 
     private static float dp(final View view, final float value) {
@@ -245,6 +255,12 @@ public class MainHook implements IXposedHookLoadPackage {
     private static void post(final Runnable action) {
         final View view = sKeyboardView.get();
         if (view != null) view.post(action);
+    }
+
+    /** Runs now when already on the UI thread, otherwise posts. */
+    private static void onUi(final Runnable action) {
+        if (Looper.myLooper() == Looper.getMainLooper()) action.run();
+        else post(action);
     }
 
     /** Wraps an action so a bug in one effect is logged instead of crashing the keyboard. */
@@ -263,7 +279,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
     // endregion
 
-    // region IME service: nav bar, settings refresh, row cascade, word capture
+    // region IME service: nav bar, settings, show animation, word capture
 
     private static void hookImeService() {
         try {
@@ -271,6 +287,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 @Override
                 protected void afterHookedMethod(final MethodHookParam param) {
                     sIme = (InputMethodService) param.thisObject;
+                    registerReloadReceiver(sIme);
+                    Caret.hook(sIme.getClass());
                 }
             });
 
@@ -279,13 +297,13 @@ public class MainHook implements IXposedHookLoadPackage {
                 @Override
                 protected void afterHookedMethod(final MethodHookParam param) {
                     sIme = (InputMethodService) param.thisObject;
-                    refreshPrefs();
+                    refreshPrefs(false);
                     applyNavBar(sIme);
-                    if (sCascade && sAnimationsOn) {
+                    if (sAnimationsOn) {
                         post(new SafeRunnable() {
                             @Override
                             void safeRun() {
-                                startCascade();
+                                startShow();
                             }
                         });
                     }
@@ -296,9 +314,11 @@ public class MainHook implements IXposedHookLoadPackage {
                         @Override
                         protected void afterHookedMethod(final MethodHookParam param) {
                             sIme = (InputMethodService) param.thisObject;
-                            refreshPrefs();
+                            refreshPrefs(false);
                             applyNavBar(sIme);
-                            hookConnectionClass(sIme.getCurrentInputConnection());
+                            final InputConnection ic = sIme.getCurrentInputConnection();
+                            hookConnectionClass(ic);
+                            Caret.request(ic);
                         }
                     });
             XposedHelpers.findAndHookMethod(InputMethodService.class, "onWindowHidden", new XC_MethodHook() {
@@ -341,61 +361,28 @@ public class MainHook implements IXposedHookLoadPackage {
     /** Keyboard hidden: drop every running effect and leftover gesture state. */
     private static void resetEffects() {
         sDrag.reset();
-        sGestureActive = false;
-        sHop = null;
-        sRing = null;
-        sSwipeKeys.clear();
-        sSwipeFlushed = false;
+        sCharging = sSwiping = sDeleteHolding = false;
+        sSwipeBuffer.clear();
+        if (sFx != null) sFx.reset();
         final View view = sKeyboardView.get();
-        if (view == null) return;
-        final EffectsLayer layer =
-                (EffectsLayer) XposedHelpers.getAdditionalInstanceField(view.getRootView(), LAYER_FIELD);
-        if (layer != null) layer.clear();
-        view.setAlpha(1f); // never leave the keys hidden by an interrupted cascade
+        if (view != null) view.setAlpha(1f); // never leave the keys hidden by an interrupted show
     }
 
-    /**
-     * Row cascade: snapshot the keyboard, hide the real view, and let the layer slide the rows
-     * in from the snapshot. Row bands come from the actual key rows, so they match any layout.
-     */
-    private static void startCascade() {
+    /** Snapshots the keyboard and lets keyfx animate it in; the real keys show once it is done. */
+    private static void startShow() {
         final View view = sKeyboardView.get();
         if (view == null || !view.isShown() || view.getWidth() == 0 || view.getHeight() == 0) return;
-        final int width = view.getWidth(), height = view.getHeight();
-
-        // Distinct row tops, merging keys that sit within a few px of each other
-        final TreeSet<Integer> tops = new TreeSet<>();
-        for (final KeyMap.KeyInfo k : KeyMap.keys(view)) tops.add(Math.round(k.hitTop));
-        final ArrayList<Integer> edges = new ArrayList<>();
-        edges.add(0);
-        final float merge = dp(view, 8f);
-        boolean first = true;
-        for (final int top : tops) {
-            // The first row's band starts at 0, so padding above it travels with it
-            if (first) {
-                first = false;
-                continue;
-            }
-            if (top <= 0 || top >= height) continue;
-            if (top - edges.get(edges.size() - 1) < merge) continue;
-            edges.add(top);
-        }
-        edges.add(height);
-        if (edges.size() < 3) return; // fewer than two rows: nothing to cascade
-
-        final int[] rowEdges = new int[edges.size()];
-        for (int i = 0; i < rowEdges.length; i++) rowEdges[i] = edges.get(i);
+        final KeyFx fx = fxFor(view);
+        if (!fx.isEnabled() || "none".equals(fx.settings.s("show", "mode"))) return;
+        updateLayout(view, fx);
 
         final Bitmap snapshot;
         try {
-            snapshot = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            snapshot = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
             view.draw(new Canvas(snapshot));
         } catch (Throwable t) {
             return; // out of memory or a draw failure: just show the keyboard normally
         }
-
-        updateOffset(view);
-        final EffectsLayer layer = layerFor(view);
         final Runnable restore = new Runnable() {
             @Override
             public void run() {
@@ -403,15 +390,12 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         };
         view.setAlpha(0f);
-        layer.startCascade(snapshot, sOffX, sOffY, rowEdges, new Runnable() {
-            @Override
-            public void run() {
-                // Called from inside a draw pass: restore on the next loop, not mid-draw
-                view.post(restore);
-            }
-        });
+        if (!fx.show(snapshot, restore)) {
+            view.setAlpha(1f);
+            return;
+        }
         // Safety net: the keys come back even if the animation never finishes
-        view.postDelayed(restore, 1500);
+        view.postDelayed(restore, 2500);
     }
 
     /**
@@ -419,7 +403,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * the text, never changes it, and only acts in the short window after a swipe ends.
      */
     private static void hookConnectionClass(final InputConnection ic) {
-        if (ic == null || !(sLetterHop && sAnimationsOn)) return;
+        if (ic == null) return;
         final Class<?> cls = ic.getClass();
         synchronized (sHookedConnections) {
             if (!sHookedConnections.add(cls)) return;
@@ -443,23 +427,17 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     private static void onTextFromSwipe(final Object arg) {
-        final EffectsLayer.Hop hop = sHop;
-        if (hop == null || sGestureActive || !(arg instanceof CharSequence)) return;
-        if (SystemClock.uptimeMillis() > sWordDeadline) return;
-
+        final KeyFx fx = sFx;
+        if (fx == null || sSwiping || !(arg instanceof CharSequence) || !fx.awaitingWord()) return;
         final String word = lettersOnly(arg.toString());
         if (word.isEmpty()) return;
         // A swipe starts on its word's first letter, which filters out unrelated commits
-        final String firstGlyph = sHopFirstGlyph;
-        if (firstGlyph != null) {
-            final String first = new String(Character.toChars(word.codePointAt(0)));
-            if (!first.equalsIgnoreCase(firstGlyph)) return;
-        }
-        sWordDeadline = 0;
-        post(new SafeRunnable() {
+        final String first = fx.firstPicked();
+        if (first != null && !new String(Character.toChars(word.codePointAt(0))).equalsIgnoreCase(first)) return;
+        onUi(new SafeRunnable() {
             @Override
             void safeRun() {
-                hop.finishWithWord(word);
+                fx.swipeWord(word);
             }
         });
     }
@@ -501,28 +479,22 @@ public class MainHook implements IXposedHookLoadPackage {
                             final MotionEvent event = (MotionEvent) param.args[0];
                             if (sKeyboardView.get() != view) sKeyboardView = new WeakReference<>(view);
 
-                            EffectsLayer layer = null;
+                            KeyFx fx = null;
+                            FxLayout layout = FxLayout.EMPTY;
                             try {
+                                fx = fxFor(view);
                                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                                    updateOffset(view);
-                                    sLastDownX = event.getX();
-                                    sLastDownY = event.getY();
+                                    layout = updateLayout(view, fx);
+                                } else {
+                                    layout = fx.layout();
                                 }
-                                if (effectsOn()) {
-                                    layer = layerFor(view);
-                                    // A finger on the keys ends the show animation at once
-                                    if (event.getActionMasked() == MotionEvent.ACTION_DOWN && layer.isCascadeRunning()) {
-                                        layer.finishCascade();
-                                    }
-                                    drawTouchEffects(view, layer, event);
-                                    trackSwipeAndHold(view, layer, event);
-                                }
+                                if (fx.isEnabled()) trackTouch(view, fx, layout, event);
                             } catch (Throwable t) {
                                 XposedBridge.log(TAG + "touch effects failed: " + t);
                             }
 
                             try {
-                                if (handleSpaceDrag(param, view, event, layer)) {
+                                if (handleSpaceDrag(param, view, event, fx, layout)) {
                                     // We own this gesture now, FUTO never sees the event
                                     param.setResult(true);
                                 }
@@ -538,95 +510,70 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
-    private static void drawTouchEffects(final View view, final EffectsLayer layer, final MotionEvent event) {
-        if (!sRipple && !sParticles) return;
-        final int action = event.getActionMasked();
-        if (action != MotionEvent.ACTION_DOWN && action != MotionEvent.ACTION_POINTER_DOWN) return;
-        final int index = event.getActionIndex();
-        final float x = event.getX(index) + sOffX, y = event.getY(index) + sOffY;
-        if (sRipple) layer.addRipple(x, y, dp(view, 36f));
-        if (sParticles) layer.addParticleBurst(x, y);
-    }
-
     /**
-     * Follows the primary finger for two things: the long-press charge ring, and the keys a
-     * potential swipe crosses. Crossed keys are buffered until FUTO confirms a swipe, then
-     * flushed into the trace and the letter hop, so the first letters are never missed.
+     * Follows the fingers for keyfx: key-down effects, the long-press charge, a held backspace
+     * ending, and the points of a potential swipe. Points are buffered from touch-down until
+     * FUTO confirms a swipe, then flushed, so the first letters are never missed.
      */
-    private static void trackSwipeAndHold(final View view, final EffectsLayer layer, final MotionEvent event) {
+    private static void trackTouch(final View view, final KeyFx fx, final FxLayout layout, final MotionEvent event) {
         final int action = event.getActionMasked();
         switch (action) {
-            case MotionEvent.ACTION_DOWN: {
-                cancelRing();
-                final float x = event.getX(), y = event.getY();
-                final KeyMap.KeyInfo key = KeyMap.hit(view, x, y);
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN: {
+                endCharge(fx);
+                final int index = event.getActionIndex();
+                final float x = event.getX(index) + sOffX, y = event.getY(index) + sOffY;
+                final FxKey key = layout.hit(x, y, dp(view, 2));
+                fx.keyDown(key, x, y);
+                if (action != MotionEvent.ACTION_DOWN) break;
 
-                sSwipeKeys.clear();
-                sSwipeFlushed = false;
-                sLastSwipeKey = key;
-                if (key != null && key.isLetter()) sSwipeKeys.add(key);
-
-                if (sChargeRing && key != null && key.hasLongPress) {
-                    final boolean space = key.code == CODE_SPACE;
-                    final float cx = (space ? x : key.centerX()) + sOffX;
-                    final float cy = key.centerY() + sOffY;
-                    final float radius = space ? key.height() * 0.6f : Math.max(key.width(), key.height()) * 0.55f;
-                    sRing = layer.startChargeRing(cx, cy, radius, (long) (sLongPressMs * 0.35f), sLongPressMs);
+                sDownX = x;
+                sDownY = y;
+                sSwiping = false;
+                sSwipeBuffer.clear();
+                sSwipeBase = event.getEventTime();
+                if (key != null && key.isLetter()) sSwipeBuffer.add(new float[] { x, y, 0 });
+                if (key != null && key.longPress && key.type != FxKey.DELETE) {
+                    fx.longPressStart(key, x, sLongPressMs);
+                    sCharging = true;
                 }
                 break;
             }
             case MotionEvent.ACTION_MOVE: {
                 if (event.getPointerCount() != 1) break;
-                final float x = event.getX(), y = event.getY();
-                if (sRing != null && Math.hypot(x - sLastDownX, y - sLastDownY) > dp(view, RING_SLOP_DP)) {
-                    cancelRing();
-                }
-                if (sDrag.tracking || !(sKeyTrace || sLetterHop)) break;
-                final KeyMap.KeyInfo key = KeyMap.hit(view, x, y);
-                if (key == null || key == sLastSwipeKey) break;
-                sLastSwipeKey = key;
-                if (!key.isLetter()) break;
-                if (sSwipeFlushed) {
-                    emitSwipeKey(layer, key, 0);
-                } else if (sSwipeKeys.size() < 40) {
-                    sSwipeKeys.add(key);
+                final float x = event.getX() + sOffX, y = event.getY() + sOffY;
+                if (sCharging && Math.hypot(x - sDownX, y - sDownY) > dp(view, HOLD_SLOP_DP)) endCharge(fx);
+                if (sSwiping) {
+                    fx.swipePoint(x, y, event.getEventTime());
+                } else if (!sSwipeBuffer.isEmpty() && sSwipeBuffer.size() < 400) {
+                    sSwipeBuffer.add(new float[] { x, y, event.getEventTime() - sSwipeBase });
                 }
                 break;
             }
-            case MotionEvent.ACTION_POINTER_DOWN:
             case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                cancelRing();
+            case MotionEvent.ACTION_CANCEL: {
+                endCharge(fx);
+                if (sSwiping) fx.swipePoint(event.getX() + sOffX, event.getY() + sOffY, event.getEventTime());
+                if (sDeleteHolding) {
+                    sDeleteHolding = false;
+                    fx.deleteHoldEnd();
+                }
                 break;
+            }
             default:
                 break;
         }
     }
 
-    private static void cancelRing() {
-        if (sRing != null) {
-            sRing.cancel();
-            sRing = null;
-        }
-    }
-
-    /** Lights a crossed key and launches its letter into the current hop. */
-    private static void emitSwipeKey(final EffectsLayer layer, final KeyMap.KeyInfo key, final long delayMs) {
-        if (sKeyTrace) {
-            layer.addTrace(key.left + sOffX, key.top + sOffY, key.right + sOffX, key.bottom + sOffY);
-        }
-        final EffectsLayer.Hop hop = sHop;
-        if (sLetterHop && hop != null) {
-            final String glyph = key.glyph();
-            if (glyph == null) return;
-            if (sHopFirstGlyph == null) sHopFirstGlyph = glyph;
-            hop.addLetter(glyph, key.centerX() + sOffX, key.centerY() + sOffY, delayMs);
-        }
+    private static void endCharge(final KeyFx fx) {
+        if (!sCharging) return;
+        sCharging = false;
+        fx.longPressEnd();
     }
 
     // endregion
 
-    // region Spacebar: vertical cursor, trail, trackpad
+    // region Spacebar: vertical cursor and trackpad
 
     /**
      * Watches spacebar drags. FUTO keeps handling them as usual (horizontal cursor drag,
@@ -638,23 +585,20 @@ public class MainHook implements IXposedHookLoadPackage {
      * @return true when the event belongs to a drag we have taken over
      */
     private static boolean handleSpaceDrag(final XC_MethodHook.MethodHookParam param, final View view,
-                                           final MotionEvent event, final EffectsLayer layer) throws Throwable {
+                                           final MotionEvent event, final KeyFx fx, final FxLayout layout) throws Throwable {
         final SpaceDrag d = sDrag;
         final float density = view.getResources().getDisplayMetrics().density;
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: {
                 d.reset();
-                if (layer != null) layer.hideTrackpad();
-                if (sVerticalCursor || sTrail || sTrackpad) {
-                    final float x = event.getX(), y = event.getY();
-                    final KeyMap.KeyInfo key = KeyMap.hit(view, x, y);
-                    if (key != null && key.code == CODE_SPACE) {
-                        d.tracking = true;
-                        d.pointerId = event.getPointerId(0);
-                        d.downX = d.anchorX = x;
-                        d.downY = d.anchorY = y;
-                    }
+                final float x = event.getX(), y = event.getY();
+                final FxKey key = layout.hit(x + sOffX, y + sOffY, 0);
+                if (key != null && key.type == FxKey.SPACE) {
+                    d.tracking = true;
+                    d.pointerId = event.getPointerId(0);
+                    d.downX = d.anchorX = x;
+                    d.downY = d.anchorY = y;
                 }
                 return false;
             }
@@ -669,11 +613,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 final int index = event.findPointerIndex(d.pointerId);
                 if (index < 0) return d.active;
                 final float x = event.getX(index), y = event.getY(index);
-
-                if (layer != null) {
-                    updateTrail(layer, d, x, y, density);
-                    layer.moveTrackpadFinger(x + sOffX, y + sOffY);
-                }
+                if (fx != null && d.cursorMode()) fx.cursorMove(x + sOffX, y + sOffY);
 
                 if (!d.active) {
                     if (!sVerticalCursor) return false;
@@ -683,9 +623,12 @@ public class MainHook implements IXposedHookLoadPackage {
                         return false;
                     }
                     cancelFutoTouch(param, view, event);
+                    final boolean wasCursor = d.cursorMode();
                     d.active = true;
-                    cancelRing();
-                    showTrackpad(view, layer, x, y);
+                    if (fx != null) {
+                        endCharge(fx);
+                        if (!wasCursor) fx.cursorMode(true, x + sOffX, y + sOffY);
+                    }
                     // The activating movement counts as the first line step
                     sendCursorKeys(view, dy < 0 ? KeyEvent.KEYCODE_DPAD_UP : KeyEvent.KEYCODE_DPAD_DOWN, 1);
                     d.anchorX = x;
@@ -718,22 +661,15 @@ public class MainHook implements IXposedHookLoadPackage {
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
-                final boolean wasActive = d.active;
+                final boolean wasActive = d.active, wasCursor = d.cursorMode();
                 d.reset();
-                if (layer != null) layer.hideTrackpad();
+                if (fx != null && wasCursor) fx.cursorMode(false, 0, 0);
                 return wasActive;
             }
 
             default:
                 return d.active;
         }
-    }
-
-    /** Dims the keys and shows the grid while the spacebar is acting as a trackpad. */
-    private static void showTrackpad(final View view, final EffectsLayer layer, final float x, final float y) {
-        if (!sTrackpad || layer == null) return;
-        layer.moveTrackpadFinger(x + sOffX, y + sOffY);
-        layer.showTrackpad(sOffX, sOffY, sOffX + view.getWidth(), sOffY + view.getHeight());
     }
 
     /** Sends FUTO a cancel for the current touch, so the spacebar press is dropped cleanly. */
@@ -768,62 +704,9 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
-    private static void updateTrail(final EffectsLayer layer, final SpaceDrag d,
-                                    final float x, final float y, final float density) {
-        if (!sTrail) return;
-        if (!d.trailStarted) {
-            // Wait for a real drag, so plain spacebar taps stay clean
-            if (Math.hypot(x - d.downX, y - d.downY) < TRAIL_START_DP * density) return;
-            d.trailStarted = true;
-            layer.addTrailPoint(d.pointerId, d.downX + sOffX, d.downY + sOffY);
-        }
-        layer.addTrailPoint(d.pointerId, x + sOffX, y + sOffY);
-    }
-
     // endregion
 
-    // region Key presses: glow, pop
-
-    private static void hookKeyPresses(final ClassLoader cl) {
-        try {
-            final Class<?> viewClass = XposedHelpers.findClass(KEYBOARD_VIEW, cl);
-            // hookAllMethods avoids depending on the exact parameter list
-            XposedBridge.hookAllMethods(viewClass, "onKeyPressed", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(final MethodHookParam param) {
-                    if (!(sGlow || sPop) || !effectsOn() || param.args.length == 0 || param.args[0] == null) return;
-                    try {
-                        final View view = (View) param.thisObject;
-                        final Object key = param.args[0];
-                        updateOffset(view);
-                        final int padLeft = view.getPaddingLeft(), padTop = view.getPaddingTop();
-                        int hGap = 0;
-                        try {
-                            hGap = XposedHelpers.getIntField(key, "horizontalGap");
-                        } catch (Throwable ignored) {
-                            // Gap unknown: the highlight is a few px wider, still fine
-                        }
-                        // Same drawn rectangle KeyMap uses, converted to layer coordinates
-                        final float left = padLeft + XposedHelpers.getIntField(key, "x") + hGap / 2 + sOffX;
-                        final float top = padTop + XposedHelpers.getIntField(key, "y") + sOffY;
-                        final float right = left + XposedHelpers.getIntField(key, "width");
-                        final float bottom = top + XposedHelpers.getIntField(key, "height");
-                        final EffectsLayer layer = layerFor(view);
-                        if (sGlow) layer.addGlow(left, top, right, bottom);
-                        if (sPop) layer.addPop(left, top, right, bottom);
-                    } catch (Throwable t) {
-                        XposedBridge.log(TAG + "key press effect failed: " + t);
-                    }
-                }
-            });
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + "key press hook failed: " + t);
-        }
-    }
-
-    // endregion
-
-    // region Keyboard actions: typed keys, swipe lifecycle, FUTO's cursor drag
+    // region Keyboard actions: typed keys, backspace, swipe lifecycle, FUTO's cursor drag
 
     /**
      * Hooks LatinIMELegacy's KeyboardActionListener methods. They are called through the
@@ -840,14 +723,23 @@ public class MainHook implements IXposedHookLoadPackage {
 
         hookAll(legacy, "onCodeInput", new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(final MethodHookParam param) {
-                if (!effectsOn() || param.args.length < 4) return;
+            protected void beforeHookedMethod(final MethodHookParam param) {
+                final KeyFx fx = sFx;
+                if (fx == null || !fx.isEnabled() || param.args.length < 4) return;
                 final int code = (Integer) param.args[0];
                 final boolean repeat = (Boolean) param.args[3];
+                // Read the letter before FUTO deletes it
+                FxLetter letter = null;
+                if (code == KeyMap.CODE_DELETE && sIme != null) {
+                    final View view = sKeyboardView.get();
+                    letter = Caret.letterBeforeCursor(sIme.getCurrentInputConnection(),
+                            view != null ? view.getRootView() : null);
+                }
+                final FxLetter deleted = letter;
                 post(new SafeRunnable() {
                     @Override
                     void safeRun() {
-                        onKeyTyped(code, repeat);
+                        onKeyTyped(fx, code, repeat, deleted);
                     }
                 });
             }
@@ -856,9 +748,7 @@ public class MainHook implements IXposedHookLoadPackage {
         hookAll(legacy, "onStartBatchInput", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(final MethodHookParam param) {
-                sGestureActive = true;
-                if (!effectsOn()) return;
-                post(new SafeRunnable() {
+                onUi(new SafeRunnable() {
                     @Override
                     void safeRun() {
                         onSwipeStarted();
@@ -870,33 +760,25 @@ public class MainHook implements IXposedHookLoadPackage {
         hookAll(legacy, "onEndBatchInput", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(final MethodHookParam param) {
-                // Set synchronously: FUTO may commit the word before a posted runnable runs
-                sGestureActive = false;
-                sWordDeadline = SystemClock.uptimeMillis() + WORD_WAIT_MS;
-                final EffectsLayer.Hop hop = sHop;
-                if (hop == null) return;
-                final View view = sKeyboardView.get();
-                if (view == null) return;
-                view.postDelayed(new SafeRunnable() {
+                onUi(new SafeRunnable() {
                     @Override
                     void safeRun() {
-                        // No word arrived in time: form the crossed letters instead
-                        if (hop.isCollecting()) hop.finishNoWord();
+                        if (!sSwiping) return;
+                        sSwiping = false;
+                        if (sFx != null) sFx.swipeEnd();
                     }
-                }, WORD_WAIT_MS);
+                });
             }
         });
 
         hookAll(legacy, "onCancelBatchInput", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(final MethodHookParam param) {
-                sGestureActive = false;
-                final EffectsLayer.Hop hop = sHop;
-                if (hop == null) return;
-                post(new SafeRunnable() {
+                onUi(new SafeRunnable() {
                     @Override
                     void safeRun() {
-                        hop.cancel();
+                        sSwiping = false;
+                        if (sFx != null) sFx.swipeCancel();
                     }
                 });
             }
@@ -906,15 +788,14 @@ public class MainHook implements IXposedHookLoadPackage {
         hookAll(legacy, "onMovePointer", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(final MethodHookParam param) {
-                if (!sTrackpad || !effectsOn()) return;
-                post(new SafeRunnable() {
+                onUi(new SafeRunnable() {
                     @Override
                     void safeRun() {
-                        final View view = sKeyboardView.get();
-                        if (view == null || !sDrag.tracking || sDrag.futoCursor) return;
+                        final KeyFx fx = sFx;
+                        if (fx == null || !sDrag.tracking || sDrag.cursorMode()) return;
                         sDrag.futoCursor = true;
-                        cancelRing();
-                        showTrackpad(view, layerFor(view), sDrag.downX, sDrag.downY);
+                        endCharge(fx);
+                        fx.cursorMode(true, sDrag.downX + sOffX, sDrag.downY + sOffY);
                     }
                 });
             }
@@ -931,69 +812,42 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
-    /** A key was typed: letter float, special-key effects and the heat streak. */
-    private static void onKeyTyped(final int code, final boolean repeat) {
-        final View view = sKeyboardView.get();
-        if (view == null) return;
-        updateOffset(view);
-        final EffectsLayer layer = layerFor(view);
-        final KeyMap.KeyInfo key = KeyMap.findByCode(view, code, sLastDownX, sLastDownY);
+    /**
+     * A key was typed. Backspace's first press is a tap; FUTO's repeats while it is held
+     * become the hold, with each deleted letter flying into the key.
+     */
+    private static void onKeyTyped(final KeyFx fx, final int code, final boolean repeat, final FxLetter deleted) {
+        final FxLayout layout = fx.layout();
+        final FxKey key = KeyMap.findByCode(layout, code, sDownX, sDownY);
+        if (key == null) return;
 
-        if (code == CODE_DELETE) {
-            // Held backspace repeats: a lighter crumble per repeat so it doesn't flood the screen
-            if (sSpecialKeys && key != null) {
-                layer.addCrumble(key.left + sOffX, key.top + sOffY, key.right + sOffX, key.bottom + sOffY,
-                        repeat ? 3 : 10);
-            }
-        } else if (code == CODE_ENTER) {
-            if (sSpecialKeys) {
-                // Sweep the enter key's row, or the spacebar row if the action key types another code
-                final KeyMap.KeyInfo row = key != null ? key
-                        : KeyMap.findByCode(view, CODE_SPACE, sLastDownX, sLastDownY);
-                if (row != null) {
-                    layer.addSweep(sOffX, row.top + sOffY, sOffX + view.getWidth(), row.bottom + sOffY);
+        if (code == KeyMap.CODE_DELETE) {
+            if (!repeat) {
+                fx.deleteTap(key, deleted);
+            } else {
+                if (!sDeleteHolding) {
+                    sDeleteHolding = true;
+                    fx.deleteHoldStart(key);
                 }
+                fx.deleteHoldLetter(deleted);
             }
-        } else if (code == CODE_SPACE) {
-            if (sSpecialKeys && key != null) {
-                layer.addShimmer(key.left + sOffX, key.top + sOffY, key.right + sOffX, key.bottom + sOffY);
-            }
-        } else if (code > CODE_SPACE && !repeat && sLetterFloat && key != null) {
-            final String glyph = key.glyph();
-            if (glyph != null) {
-                layer.addLetterFloat(glyph, key.centerX() + sOffX, key.centerY() + sOffY, key.height() * 0.42f);
-            }
+            return;
         }
-
-        if (sHeat && !repeat) layer.addHeat(sOffX, sOffY, sOffX + view.getWidth());
+        if (repeat) return;
+        final String glyph = code > KeyMap.CODE_SPACE && Character.isValidCodePoint(code)
+                ? new String(Character.toChars(code)) : null;
+        fx.keyTyped(key, glyph, key.type == FxKey.SPACE ? sDownX : key.cx());
     }
 
-    /** FUTO confirmed a swipe: start the hop and flush the keys crossed so far. */
+    /** FUTO confirmed a swipe: start it in keyfx and flush the points buffered since touch-down. */
     private static void onSwipeStarted() {
-        final View view = sKeyboardView.get();
-        if (view == null) return;
-        cancelRing();
-        updateOffset(view);
-        final EffectsLayer layer = layerFor(view);
-
-        // A previous word still on screen gives way to the new swipe
-        final EffectsLayer.Hop previous = sHop;
-        if (previous != null && previous.isCollecting()) previous.cancel();
-        sHop = null;
-        sHopFirstGlyph = null;
-
-        if (sLetterHop) {
-            // Letters gather in the suggestion bar, just above the keys
-            final float baseline = Math.max(dp(view, 14f), sOffY - dp(view, 22f));
-            sHop = layer.startHop(sOffX + view.getWidth() * 0.5f, baseline,
-                    view.getWidth() * 0.9f, dp(view, 22f));
-        }
-        for (int i = 0; i < sSwipeKeys.size(); i++) {
-            // Staggered so the buffered letters still hop up one after another
-            emitSwipeKey(layer, sSwipeKeys.get(i), i * 28L);
-        }
-        sSwipeKeys.clear();
-        sSwipeFlushed = true;
+        final KeyFx fx = sFx;
+        if (fx == null || !fx.isEnabled()) return;
+        endCharge(fx);
+        sSwiping = true;
+        fx.swipeStart();
+        for (final float[] p : sSwipeBuffer) fx.swipePoint(p[0], p[1], sSwipeBase + (long) p[2]);
+        sSwipeBuffer.clear();
     }
 
     // endregion
