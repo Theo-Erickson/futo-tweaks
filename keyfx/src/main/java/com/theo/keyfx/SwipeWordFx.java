@@ -267,10 +267,24 @@ final class SwipeWordFx extends FxModule {
 
     private Constellation cons;
 
+    // The highlight (hosts with CAP_SUGGESTION_STYLE): letters crossed so far and the host's guess
+    private final StringBuilder crossed = new StringBuilder();
+    private String guess;
+
+    private void updateWord() {
+        final boolean wanted = (fx.caps & KeyFx.CAP_SUGGESTION_STYLE) != 0 && fx.on("hop")
+                && fx.settings.b("hop", "highlight") && guess != null && !guess.isEmpty();
+        final int lit = wanted ? Fx.litLetters(guess, crossed.toString()) : 0;
+        fx.setWord(lit > 0 ? new WordLook(guess, lit, fx.settings.f("hop", "grow"), fx.accent()) : null);
+    }
+
     // endregion
 
     @Override
     public void onSwipeStart() {
+        crossed.setLength(0);
+        guess = null;
+        fx.setWord(null);
         // A previous word still collecting gives way to the new swipe
         if (hop != null && hop.collecting) hop.finish(null);
         hop = null;
@@ -286,6 +300,21 @@ final class SwipeWordFx extends FxModule {
             cons = new Constellation();
             fx.add(cons);
         }
+    }
+
+    @Override
+    public void onSwipeCross(FxKey k, int index) {
+        if ((fx.caps & KeyFx.CAP_SUGGESTION_STYLE) == 0) return;
+        final String g = k.glyph();
+        if (g != null) crossed.append(g);
+        updateWord();
+    }
+
+    @Override
+    public void onSwipeGuess(String word) {
+        if ((fx.caps & KeyFx.CAP_SUGGESTION_STYLE) == 0) return;
+        guess = word;
+        updateWord();
     }
 
     @Override
@@ -308,6 +337,7 @@ final class SwipeWordFx extends FxModule {
 
     @Override
     public void onSwipeWord(String word) {
+        fx.setWord(null);
         if (hop != null) {
             hop.finish(word);
             hop = null;
@@ -317,6 +347,7 @@ final class SwipeWordFx extends FxModule {
 
     @Override
     public void onSwipeCancel() {
+        fx.setWord(null);
         if (hop != null) {
             hop.finish(null);
             hop = null;
@@ -331,6 +362,8 @@ final class SwipeWordFx extends FxModule {
     public void reset() {
         hop = null;
         cons = null;
+        crossed.setLength(0);
+        guess = null;
     }
 
     // region Commit burst

@@ -56,6 +56,12 @@ public abstract class FxModule {
     /** The word the swipe produced, or null when the host could not tell in time. */
     public void onSwipeWord(String word) {}
 
+    /**
+     * The host's live best guess at the word while the swipe is still going. The word may be
+     * null or empty when the host has no guess yet.
+     */
+    public void onSwipeGuess(String word) {}
+
     public void onSwipeCancel() {}
 
     /** The spacebar started or stopped acting as a trackpad. */
@@ -83,6 +89,20 @@ public abstract class FxModule {
 
     /** Persistent state drawn above the per-event effects. Return true while animating. */
     public boolean drawOver(Canvas c, long t) {
+        return false;
+    }
+
+    /**
+     * How this module changes a real key right now (hosts with KeyFx.CAP_KEY_TRANSFORM only).
+     * Combine into out with scaleBy, move, fade and fadeLabel; never reset it.
+     */
+    public void look(FxKey k, KeyLook out, long t) {}
+
+    /**
+     * True while this module is changing how any real key looks, so the host keeps redrawing.
+     * Call fx.kick() when keys start moving: draw() only runs while invalidated.
+     */
+    public boolean keysMoving(long t) {
         return false;
     }
 

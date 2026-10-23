@@ -6,6 +6,8 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
+import java.util.IdentityHashMap;
+
 /**
  * Keyboard show and hide animations. Both work from a snapshot of the keyboard: the host hides
  * the real view, keyfx animates pieces of the snapshot, then onDone lets the host show it again.
@@ -21,7 +23,9 @@ final class ShowFx extends FxModule {
                         Field.choice("mode", "Style", "bloom", "bloom:Center bloom", "cascade:Row cascade", "none:None"),
                         Field.range("duration", "Duration", 120, 900, 10, "ms", 320).whenNot("mode", "none"),
                         Field.range("stagger", "Stagger", 0, 120, 1, "ms", 40).whenNot("mode", "none"),
-                        Field.range("overshoot", "Overshoot", 0, 3, 0.05f, "×", 1.2f).whenNot("mode", "none")),
+                        Field.range("overshoot", "Overshoot", 0, 3, 0.05f, "×", 1.2f).whenNot("mode", "none"),
+                        Field.toggle("perKey", "Animate each key", true).whenNot("mode", "none")
+                                .requires(KeyFx.CAP_KEY_TRANSFORM)),
                 new Section("hide", G, 710, "Hide animation",
                         "A quick moment before the keyboard slides away.", false, true,
                         Field.choice("mode", "Style", "dip", "dip:Dip", "none:None"),
@@ -125,6 +129,13 @@ final class ShowFx extends FxModule {
 
     private Anim anim;
 
+    // Per-key show (hosts with CAP_KEY_TRANSFORM): each key's start delay, read by look()
+    private final IdentityHashMap<FxKey, Float> keyDelays = new IdentityHashMap<>();
+    private long keysT0;
+    private float keysDur, keysOvershoot, keysEnd;
+    private boolean keysBloom;
+    private Runnable keysDone;
+
     ShowFx(KeyFx fx) {
         super(fx);
     }
@@ -136,6 +147,7 @@ final class ShowFx extends FxModule {
         finishNow();
         final float dur = fx.D(fx.settings.f("show", "duration")), stagger = fx.D(fx.settings.f("show", "stagger"));
         final float overshoot = fx.settings.f("show", "overshoot");
+        if (snapshot == null) return showKeys(onDone, "bloom".equals(mode), dur, stagger, overshoot);
         if ("bloom".equals(mode)) {
             final FxKey[] keys = fx.layout().keys;
             final RectF kb = fx.layout().keyboard;
@@ -172,6 +184,66 @@ final class ShowFx extends FxModule {
         return true;
     }
 
+    /** Animates the real keys through look(): the same bloom or cascade timing, no snapshot. */
+    private boolean showKeys(Runnable onDone, boolean bloom, float dur, float stagger, float overshoot) {
+        final FxKey[] keys = fx.layout().keys;
+        final RectF kb = fx.layout().keyboard;
+        final float[][] bands = rowBands();
+        keyDelays.clear();
+        float last = 0;
+        for (FxKey k : keys) {
+            float d;
+            if (bloom) {
+                d = (float) Math.hypot(k.cx() - kb.centerX(), (k.cy() - kb.centerY()) * 1.4f) / fx.dp(40) * stagger * 0.5f;
+            } else {
+                int row = bands.length > 0 && k.cy() < bands[0][1] ? 0 : bands.length - 1;
+                for (int i = 0; i < bands.length; i++) if (k.cy() >= bands[i][1] && k.cy() < bands[i][3]) row = i;
+                d = (bands.length - 1 - row) * stagger; // bottom row first
+            }
+            keyDelays.put(k, d);
+            last = Math.max(last, d);
+        }
+        keysBloom = bloom;
+        keysDur = dur;
+        keysOvershoot = overshoot;
+        keysEnd = last + dur;
+        keysDone = onDone;
+        keysT0 = fx.now();
+        fx.kick();
+        return true;
+    }
+
+    @Override
+    public void look(FxKey k, KeyLook out, long t) {
+        if (keysT0 == 0) return;
+        final Float d = keyDelays.get(k);
+        if (d == null) return;
+        final float p = Fx.clamp01((t - keysT0 - d) / keysDur), e = back(p, keysOvershoot);
+        if (keysBloom) out.scaleBy(0.2f + 0.8f * e);
+        else out.move(0, k.h() * 0.9f * (1 - e));
+        out.fade(Fx.clamp01(p * 1.6f));
+    }
+
+    @Override
+    public boolean keysMoving(long t) {
+        if (keysT0 == 0) return false;
+        if (t - keysT0 < keysEnd) return true;
+        finishKeys();
+        return false;
+    }
+
+    private void finishKeys() {
+        if (keysT0 == 0) return;
+        keysT0 = 0;
+        keyDelays.clear();
+        final Runnable cb = keysDone;
+        keysDone = null;
+        if (cb != null) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(cb);
+        }
+        fx.kick();
+    }
+
     /** Horizontal bands of the keyboard, one per key row; padding above the first row travels with it. */
     private float[][] rowBands() {
         final RectF kb = fx.layout().keyboard;
@@ -195,6 +267,7 @@ final class ShowFx extends FxModule {
 
     private void finishNow() {
         if (anim != null) anim.finish();
+        finishKeys();
     }
 
     @Override

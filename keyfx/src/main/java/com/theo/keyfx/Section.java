@@ -33,4 +33,9 @@ public final class Section {
     public boolean supportedBy(int hostCaps) {
         return (requires & hostCaps) == requires;
     }
+
+    /** The capabilities this section needs that the host lacks, or 0. */
+    public int missing(int hostCaps) {
+        return requires & ~hostCaps;
+    }
 }

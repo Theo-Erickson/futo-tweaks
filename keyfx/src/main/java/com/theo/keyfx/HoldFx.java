@@ -172,7 +172,7 @@ final class HoldFx extends FxModule {
         final float dt = last != 0 ? t - last : 0;
         last = t;
         level = level < target ? Math.min(1, level + dt / 150) : Math.max(target, level - dt / 200);
-        if (level <= 0) {
+        if (level <= 0 && target <= 0) {
             last = 0;
             return false;
         }
@@ -195,6 +195,16 @@ final class HoldFx extends FxModule {
             c.drawCircle(tpX, tpY, halo, fx.stroke(Fx.alpha(fx.accent(), 0.5f * L * s), fx.dp(1.5f)));
         }
         return level != target || target > 0;
+    }
+
+    @Override
+    public void look(FxKey k, KeyLook out, long t) {
+        if (level > 0) out.fadeLabel(1 - fx.settings.f("trackpad", "labels") * level);
+    }
+
+    @Override
+    public boolean keysMoving(long t) {
+        return level != target;
     }
 
     private static float mod(float a, float m) {

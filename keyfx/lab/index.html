@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>[hidden]{display:none!important}body{margin:0}</style>
-<title>FX for FUTO Keyboard Lab</title>
+<title>keyfx Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
 </head>
 <body>
 <style>
-/* Layout: a single settings column (two on wide screens) above a phone-width mock keyboard
+/* Layout: a single settings column (two on wide screens, cards equal height per section) above a phone-width mock keyboard
    docked to the bottom, summoned by a floating button pinned to the top-right corner. */
 :root {
   --bg: #EDEFF3;
@@ -175,17 +175,24 @@ h1 {
 }
 .section > p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
 .cards { display: grid; gap: 12px; grid-template-columns: 1fr; }
-@media (min-width: 880px) { .cards { grid-template-columns: 1fr 1fr; align-items: start; } }
+/* Wide screens: two columns, and every card in a section matches the tallest one */
+@media (min-width: 880px) {
+  .cards { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+  #card-global { grid-column: 1 / -1; }
+  #card-global .fields { grid-template-columns: 1fr 1fr; column-gap: 28px; align-items: start; }
+}
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 16px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-width: 0;
 }
+.card .card-foot { margin-top: auto; }
 .card.off .fields { opacity: 0.45; }
 .card-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
 .card-head h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0; }
@@ -398,9 +405,9 @@ input[type="color"] { width: 44px; height: 30px; border: 1px solid var(--line); 
 
 <div class="page">
   <header class="intro">
-    <span class="eyebrow">FX for FUTO Keyboard 1.1 · effect lab</span>
-    <h1>FX for FUTO Keyboard Lab</h1>
-    <p>Tune every effect against a mock of FUTO Keyboard. Tap the keyboard button in the corner to bring it up while you scroll, or use Preview on any card. Type, swipe words, hold e or a for accents, drag the spacebar, and hold backspace.</p>
+    <span class="eyebrow">keyfx · effect lab</span>
+    <h1>keyfx Lab</h1>
+    <p>Tune every keyfx effect against a mock of FUTO Keyboard. Tap the keyboard button in the corner to bring it up while you scroll, or use Preview on any card to see that effect on its own. Type, swipe words, hold e or a for accents, drag the spacebar, and hold backspace.</p>
     <div class="intro-actions">
       <button class="btn primary" id="exportBtn" type="button">Export settings</button>
       <button class="btn" id="resetBtn" type="button">Reset to defaults</button>
@@ -444,18 +451,20 @@ input[type="color"] { width: 44px; height: 30px; border: 1px solid var(--line); 
 /* ================================================================
    Settings model
    Values mirror the module's knobs, so an export can be dropped
-   straight into the next FX for FUTO Keyboard build as defaults.
+   straight into a keyfx host (FX for FUTO Keyboard, FXboard) or its defaults.
    ================================================================ */
 const DEFAULTS = {
   global: { accent: '#8AB4F8', kbTheme: 'dark', speed: 1, intensity: 1 },
-  pop: { on: true, grow: 6, pullback: 340, bounce: 0.35, strength: 1 },
+  pop: { on: true, grow: 6, pullback: 340, bounce: 0.35, scaleKey: true, keyScale: 1.12, strength: 1 },
   float: { on: true, mode: 'ghost', rise: 42, duration: 640, grow: 1.6, wave: 8, waves: 1.5, strength: 1 },
   heat: { on: true, swipe: true, build: 0.09, cool: 1100, threshold: 0.12, thickness: 18, strength: 1 },
   wave: { on: true, radius: 1.8, speed: 0.35, strength: 0.8 },
+  ripple: { on: false, radius: 36, duration: 380, strength: 1 },
+  sparks: { on: false, count: 10, life: 520, gravity: 320, strength: 1 },
   enter: { on: true, duration: 380, width: 30, strength: 1 },
   space: { on: true, mode: 'stars', count: 9, spread: 1, life: 760, strength: 1 },
   del: { on: true, tap: 'fire', letterFx: true, fireHeight: 1, fireCount: 22, fireLife: 620, slashSpeed: 70, slashOver: 0.25, slashTilt: 15, shards: 8, strength: 1 },
-  delHold: { on: true, button: 'blackhole', letters: 'swirl', flight: 1100, offset: 0, size: 34, swirl: 1, strength: 1 },
+  delHold: { on: true, button: 'blackhole', letters: 'swirl', flight: 1100, offset: 0, size: 34, swirl: 1, shake: true, strength: 1 },
   futoTrail: { on: true },
   trace: { on: true, color: 'accent', custom: '#FF8A3D', duration: 620, strength: 1 },
   comet: { on: false, length: 260, width: 7, hue: 60, strength: 1 },
@@ -468,7 +477,8 @@ const DEFAULTS = {
   ring: { on: true, style: 'liquid', timeout: 300, appear: 35, thickness: 3, wave: 3, strength: 1 },
   popup: { style: 'bloom', radius: 70 },
   trackpad: { on: true, dim: 0.6, labels: 0.85, grid: 0.35, halo: 26, strength: 1 },
-  show: { mode: 'bloom', duration: 320, stagger: 40, overshoot: 1.2 },
+  // perKey only matters on the phone (snapshot vs real keys); the lab always animates key by key
+  show: { mode: 'bloom', duration: 320, stagger: 40, overshoot: 1.2, perKey: true },
   hide: { mode: 'dip', duration: 160 },
 };
 
@@ -485,7 +495,31 @@ try {
 } catch (e) { /* storage blocked: start from defaults */ }
 if (cfg.del.tap === 'crumble') cfg.del.tap = 'shatter'; // renamed in v2
 function save() {
-  try { localStorage.setItem(STORE, JSON.stringify({ cfg, notes })); } catch (e) { /* not persisted */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ cfg: userCfg(), notes })); } catch (e) { /* not persisted */ }
+}
+/* While a preview runs, every other effect is switched off in cfg; isolated holds the user's own on/off values. */
+let isolated = null;
+function userCfg() {
+  if (!isolated) return cfg;
+  const c = clone(cfg);
+  for (const id in isolated) c[id].on = isolated[id];
+  return c;
+}
+// Effects a preview keeps on beside its own, where it has nothing to show by itself
+const PREVIEW_WITH = { pick: ['hop'] };
+function isolate(id) {
+  isolated = {};
+  const keep = [id, ...(PREVIEW_WITH[id] || [])];
+  for (const k in cfg) {
+    if (!('on' in cfg[k])) continue;
+    isolated[k] = cfg[k].on;
+    cfg[k].on = keep.includes(k);
+  }
+}
+function unisolate() {
+  if (!isolated) return;
+  for (const id in isolated) cfg[id].on = isolated[id];
+  isolated = null;
 }
 
 /* Field builders for the settings cards */
@@ -498,7 +532,8 @@ const STR = R('strength', 'Intensity', 0, 1.5, 0.05, '×');
 const SECTIONS = [
   { title: 'Typing', blurb: 'What a normal key tap does. Shift and capitals work here.', items: [
     { id: 'pop', name: 'Key pop', desc: 'The key highlight swells past its edges, then pulls back.', demo: 'type', fields: [
-      R('grow', 'Swell', 0, 16, 0.5, 'dp'), R('pullback', 'Pullback time', 80, 1000, 10, 'ms'), R('bounce', 'Bounce', 0, 1, 0.05, ''), STR] },
+      R('grow', 'Swell', 0, 16, 0.5, 'dp'), R('pullback', 'Pullback time', 80, 1000, 10, 'ms'), R('bounce', 'Bounce', 0, 1, 0.05, ''),
+      T('scaleKey', 'Scale the real key'), R('keyScale', 'Key growth', 1, 1.4, 0.01, '×', (c) => c.scaleKey), STR] },
     { id: 'float', name: 'Letter float', desc: 'The typed letter lifts off its key. Ghost sends up a see-through copy of the key that sways as it rises.', demo: 'type', fields: [
       C('mode', 'Style', [['rise', 'Rise'], ['grow', 'Grow'], ['ghost', 'Ghost key']]),
       R('rise', 'Rise height', 0, 100, 1, 'dp'), R('duration', 'Duration', 200, 1500, 10, 'ms'),
@@ -511,6 +546,11 @@ const SECTIONS = [
       R('threshold', 'Shows from', 0, 0.6, 0.01, ''), R('thickness', 'Glow height', 4, 40, 1, 'dp'), STR] },
     { id: 'wave', name: 'Neighbor wave', tag: 'new', desc: 'Each press sends a ripple of light across the keys around it.', demo: 'type', fields: [
       R('radius', 'Reach', 1, 4, 0.1, 'keys'), R('speed', 'Speed', 0.1, 1.2, 0.05, 'dp/ms'), STR] },
+    { id: 'ripple', name: 'Ripple', tag: 'new', desc: 'A ring expands from where you touch.', demo: 'type', fields: [
+      R('radius', 'Size', 12, 80, 1, 'dp'), R('duration', 'Duration', 150, 1000, 10, 'ms'), STR] },
+    { id: 'sparks', name: 'Sparks', tag: 'new', desc: 'A small burst of sparks flies off each press and falls.', demo: 'type', fields: [
+      R('count', 'Amount', 3, 30, 1, ''), R('life', 'Lifetime', 200, 1200, 10, 'ms'),
+      R('gravity', 'Gravity', 0, 800, 10, 'dp/s²'), STR] },
   ] },
   { title: 'Special keys', blurb: 'Enter, space and backspace get their own effects.', items: [
     { id: 'enter', name: 'Enter sweep', desc: 'A band of light sweeps across the enter key\'s row.', demo: 'enter', fields: [
@@ -535,7 +575,8 @@ const SECTIONS = [
       R('flight', 'Letter travel time', 300, 2400, 10, 'ms', (c) => c.letters !== 'press'),
       R('offset', 'Black hole position, key to center', 0, 1, 0.01, '', (c) => c.button === 'blackhole'),
       R('size', 'Black hole size', 16, 60, 1, 'dp', (c) => c.button === 'blackhole'),
-      R('swirl', 'Swirl speed', 0.2, 3, 0.05, '×', (c) => c.letters === 'swirl'), STR] },
+      R('swirl', 'Swirl speed', 0.2, 3, 0.05, '×', (c) => c.letters === 'swirl'),
+      T('shake', 'Shake the key', (c) => c.button === 'lava'), STR] },
   ] },
   { title: 'Swipe trail', blurb: 'Drawn along your finger while swiping a word. Several can run at once.', items: [
     { id: 'futoTrail', name: 'FUTO\'s own trail', desc: 'The thin line FUTO already draws. Turn it off to judge the others alone.', demo: 'swipe', fields: [] },
@@ -578,7 +619,8 @@ const SECTIONS = [
   { title: 'Keyboard show and hide', blurb: 'Plays when the keyboard appears and goes away.', items: [
     { id: 'show', name: 'Show animation', tag: 'new', noToggle: true, desc: 'Center bloom pops the keys in from the middle outward. Row cascade raises the rows from the bottom.', demo: 'show', fields: [
       C('mode', 'Style', [['bloom', 'Center bloom'], ['cascade', 'Row cascade'], ['none', 'None']]),
-      R('duration', 'Duration', 120, 900, 10, 'ms'), R('stagger', 'Stagger', 0, 120, 1, 'ms'), R('overshoot', 'Overshoot', 0, 3, 0.05, '×')] },
+      R('duration', 'Duration', 120, 900, 10, 'ms'), R('stagger', 'Stagger', 0, 120, 1, 'ms'), R('overshoot', 'Overshoot', 0, 3, 0.05, '×'),
+      T('perKey', 'Animate each key', (c) => c.mode !== 'none')] },
     { id: 'hide', name: 'Hide animation', noToggle: true, desc: 'Android runs the real hide, so this can only be a quick moment before the slide.', demo: 'show', fields: [
       C('mode', 'Style', [['dip', 'Dip'], ['none', 'None']]), R('duration', 'Duration', 80, 500, 10, 'ms')] },
   ] },
@@ -683,7 +725,7 @@ function buildField(id, f) {
 function refreshVisibility(id) {
   for (const { def, el } of fieldRefs[id] || []) el.hidden = def.show ? !def.show(cfg[id]) : false;
   const card = $(`#card-${id}`);
-  if (card && 'on' in cfg[id]) card.classList.toggle('off', !cfg[id].on);
+  if (card && 'on' in cfg[id]) card.classList.toggle('off', !(isolated && id in isolated ? isolated[id] : cfg[id].on));
 }
 
 function changed(id) {
@@ -732,7 +774,11 @@ function buildCard(item) {
   if (!item.noToggle) {
     const on = card.querySelector(`#${id}-on`);
     on.checked = !!c.on;
-    on.addEventListener('change', () => { c.on = on.checked; changed(id); });
+    on.addEventListener('change', () => {
+      if (isolated && id in isolated) isolated[id] = on.checked; // takes effect when the preview ends
+      else c.on = on.checked;
+      changed(id);
+    });
   }
   const fields = card.querySelector('.fields');
   fieldRefs[id] = [];
@@ -851,7 +897,7 @@ function hit(x, y) {
 }
 
 /* ---------- Text field ---------- */
-let text = 'Hey Theo, try swiping a word\nor drag the spacebar up and down.\n', caret = text.length;
+let text = 'Remember Reach. Try swiping a word\nor drag the spacebar up and down.\n', caret = text.length;
 let shift = 0; // 0 off, 1 once, 2 locked
 let lastCommit = null;
 
@@ -909,11 +955,23 @@ function caretPoint() {
 $('#clearField').addEventListener('click', () => { text = ''; caret = 0; renderField(); setSuggestions(['', '', '']); });
 
 /* ---------- Mini swipe decoder and suggestions ---------- */
-const DICT = ('the of and to in is you that it he was for on are as with his they at be this have from or one had by word but not what all were we when your can said there use an each which she do how their if will up other about out many then them these so some her would make like him into time has look two more write go see number no way could people my than first water been call who its now find long down day did get come made may part hello world keyboard theo swipe typing effect effects futo pixel phone great thanks thank good morning night love test testing quick brown fox jumps over lazy dog yes okay sure later today tomorrow tonight here where why because really very just know think want need going still back over home work game games play design designer laser maker space star stars wave ghost fire black hole letter letters magic animation smooth feel nice cool awesome perfect almost little big small sweep shimmer comet stardust trace ring bloom cascade jump hop').split(' ');
+const DICT = ('the of and to in is you that it he was for on are as with his they at be this have from or one had by word but not what all were we when your can said there use an each which she do how their if will up other about out many then them these so some her would make like him into time has look two more write go see number no way could people my than first water been call who its now find long down day did get come made may part hello world keyboard swipe typing effect effects futo pixel phone great thanks thank good morning night love test testing quick brown fox jumps over lazy dog yes okay sure later today tomorrow tonight here where why because really very just know think want need going still back over home work game games play design designer laser maker space star stars wave ghost fire black hole letter letters magic animation smooth feel nice cool awesome perfect almost little big small sweep shimmer comet stardust trace ring bloom cascade jump hop remember reach cowboy talk cheap show code everyone fix own open free software source share').split(' ');
 const collapse = (w) => w.replace(/(.)\1+/g, '$1');
 function subseqCount(word, seq) { // how many leading letters of word appear in order in seq
   let j = 0, n = 0;
   for (const ch of word) {
+    const at = seq.indexOf(ch, j);
+    if (at < 0) break;
+    j = at + 1;
+    n++;
+  }
+  return n;
+}
+function litLetters(word, seq) { // raw letters lit: a repeat of the previous letter is lit when that one was
+  let j = 0, n = 0, prev = null;
+  for (const ch of word) {
+    if (ch === prev) { n++; continue; }
+    prev = ch;
     const at = seq.indexOf(ch, j);
     if (at < 0) break;
     j = at + 1;
@@ -1049,6 +1107,15 @@ function frame() {
 }
 
 /* ---------- Typing effects ---------- */
+// The pop on the real key element (keyfx hosts with CAP_KEY_TRANSFORM scale the key the same way)
+function fxPopKey(k) {
+  const c = cfg.pop;
+  if (!c.scaleKey || !k.el.animate) return;
+  const total = D(70 + c.pullback);
+  k.el.animate([{ transform: 'scale(1)' }, { transform: `scale(${c.keyScale})`, offset: D(70) / total }, { transform: 'scale(1)' }],
+    { duration: total, easing: 'ease-out' });
+}
+
 function fxPop(k) {
   const c = cfg.pop, t0 = now(), grow = D(70), pull = D(c.pullback), s = S('pop');
   addFx((t) => {
@@ -1148,6 +1215,41 @@ function fxWave(k) {
       ctx.fill();
     }
     return alive;
+  });
+}
+
+function fxRipple(x, y) {
+  const c = cfg.ripple, t0 = now(), life = D(c.duration), s = S('ripple');
+  addFx((t) => {
+    const p = (t - t0) / life;
+    if (p >= 1) return false;
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(0.1, c.radius * easeOut(p)), 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(accent(), 0.7 * (1 - p) * s);
+    ctx.lineWidth = 3 - 2 * p;
+    ctx.stroke();
+    return true;
+  });
+}
+
+function fxSparks(x, y) {
+  const c = cfg.sparks, t0 = now(), life = D(c.life), s = S('sparks');
+  const parts = Array.from({ length: Math.round(c.count) }, () => {
+    // Spread around the full circle, biased upward so sparks rise off the key
+    const a = Math.random() * Math.PI * 2, speed = rand(60, 150);
+    return { vx: Math.cos(a) * speed, vy: Math.sin(a) * speed - 60, r: rand(1.5, 3) };
+  });
+  addFx((t) => {
+    const p = (t - t0) / life;
+    if (p >= 1) return false;
+    const e = (p * c.life) / 1000; // seconds at normal speed, so the speed setting speeds the flight too
+    ctx.fillStyle = rgba(accent(), (1 - p) * s);
+    for (const q of parts) {
+      ctx.beginPath();
+      ctx.arc(x + q.vx * e, y + q.vy * e + 0.5 * c.gravity * e * e, q.r * (1 - 0.5 * p), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return true;
   });
 }
 
@@ -1520,7 +1622,7 @@ function holdLetter(L) {
     // As if backspace were tapped once for this letter
     h.k.el.classList.add('pressed');
     setTimeout(() => h.k.el.classList.remove('pressed'), 60);
-    if (cfg.pop.on) fxPop(h.k);
+    if (cfg.pop.on) { fxPop(h.k); fxPopKey(h.k); }
     fxDelTap(h.k, L);
     return;
   }
@@ -1544,7 +1646,7 @@ function drawHold(h, t) {
     const amp = Math.min(3.5, held / 350);
     h.jx = rand(-amp, amp);
     h.jy = rand(-amp, amp) * 0.6;
-    k.el.style.transform = `translate(${h.jx}px, ${h.jy}px)`;
+    if (c.shake) k.el.style.transform = `translate(${h.jx}px, ${h.jy}px)`;
   }
   switch (h.button) {
     case 'blackhole': drawBlackHole(T.x, T.y, lerp(7, c.size, grow) * (1 - easeIn(closing)), t, s); break;
@@ -2106,8 +2208,10 @@ function inDown(x, y) {
   if (!k) return;
   Object.assign(P, { active: true, k, x0: x, y0: y, x, y, mode: 'tap', crossed: [], lastKey: k, timer: 0 });
   k.el.classList.add('pressed');
-  if (cfg.pop.on) fxPop(k);
+  if (cfg.pop.on) { fxPop(k); fxPopKey(k); }
   if (cfg.wave.on && k.row > 0) fxWave(k);
+  if (cfg.ripple.on) fxRipple(x, y);
+  if (cfg.sparks.on) fxSparks(x, y);
   if (LONG_KEYS(k)) {
     chargeStart(k, x);
     P.timer = setTimeout(() => onLongPress(k), cfg.ring.timeout);
@@ -2289,7 +2393,7 @@ function swipeMove(x, y) {
   if (mode === 'all') pickKey(k);
   const seq = P.crossed.map((c) => c.c).join('');
   const live = decode(seq, false);
-  setSuggestions(live, live[0] ? subseqCount(collapse(live[0]), seq) : 0);
+  setSuggestions(live, live[0] ? litLetters(live[0], seq) : 0);
 }
 /** Letters under the points where the finger path turns by more than about 55 degrees. */
 function pathCorners() {
@@ -2428,17 +2532,30 @@ async function hideKeyboard() {
 fab.addEventListener('click', () => (kbOpen ? hideKeyboard() : showKeyboard()));
 addEventListener('resize', () => { if (kbOpen) measure(); });
 
-/* Public-domain passage for the hands-free tests (Gettysburg Address, 1863). */
-const PASSAGE = 'Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.';
+/* Lines for the hands-free tests, one per run in turn. Letters, spaces, commas and periods only, since
+   those are the keys the mock has. */
+const PASSAGES = [
+  'Remember Reach.',
+  'See you later, space cowboy.',
+  'To be, or not to be, that is the question.', // Shakespeare, Hamlet
+  'We know what we are, but know not what we may be.', // Shakespeare, Hamlet
+  'Though she be but little, she is fierce.', // Shakespeare, A Midsummer Night's Dream
+  'Talk is cheap. Show me the code.', // Linus Torvalds
+  'This is for everyone.', // Tim Berners-Lee, on the web
+  'If you cannot fix it, you do not own it.', // the right to repair motto
+];
+let passageAt = 0;
+const nextPassage = () => PASSAGES[passageAt++ % PASSAGES.length];
 
 /* ================================================================
    Previews: scripted touches through the same input path
    ================================================================ */
 const demo = {
   running: false, token: 0,
-  cancel() { this.token++; this.running = false; if (P.active) inUp(); },
+  cancel() { this.token++; this.running = false; if (P.active) inUp(); unisolate(); },
 };
 async function runDemo(kind, id) {
+  demo.cancel();
   // Make sure the effect being previewed is on
   if (id && cfg[id] && 'on' in cfg[id] && !cfg[id].on) {
     cfg[id].on = true;
@@ -2446,16 +2563,25 @@ async function runDemo(kind, id) {
     if (box) box.checked = true;
     changed(id);
   }
-  demo.cancel();
   const my = ++demo.token;
   demo.running = true;
   const alive = () => demo.token === my;
+  // Preview the effect alone; the others come back once its last animation has finished
+  if (id) isolate(id);
+  try {
+    await playDemo(kind, alive);
+    const until = now() + 3000;
+    while (alive() && (FX.length || P.active) && now() < until) await sleep(50);
+  } finally {
+    if (alive()) { unisolate(); demo.running = false; }
+  }
+}
+async function playDemo(kind, alive) {
   if (kind === 'show') {
     await hideKeyboard();
     await sleep(250);
     if (!alive()) return;
     await showKeyboard();
-    demo.running = false;
     return;
   }
   if (!kbOpen) { await showKeyboard(); }
@@ -2496,15 +2622,16 @@ async function runDemo(kind, id) {
   };
   // Hands-free passage: typed key by key, or swiped word by word with punctuation tapped
   const startLine = () => { if (text && !text.endsWith('\n')) insertText('\n'); };
+  const passage = kind.startsWith('sim') ? nextPassage() : '';
   if (kind === 'simType') {
     startLine();
-    for (const ch of PASSAGE) {
+    for (const ch of passage) {
       if (!alive()) break;
       await typeStr(ch, rand(70, 150));
     }
   } else if (kind === 'simSwipe') {
     startLine();
-    for (const token of PASSAGE.split(' ')) {
+    for (const token of passage.split(' ')) {
       if (!alive()) break;
       const m = token.match(/^([A-Za-z]+)([,.]?)$/);
       if (!m) { await typeStr(token + ' ', 90); continue; }
@@ -2519,11 +2646,11 @@ async function runDemo(kind, id) {
     }
   } else if (kind === 'simPaste') {
     startLine();
-    insertText(PASSAGE);
+    insertText(passage);
     typingSuggestions();
   }
   switch (kind) {
-    case 'type': await typeStr('Hey Theo ', 170); break;
+    case 'type': await typeStr('Remember Reach ', 170); break;
     case 'heat': await typeStr('the quick brown fox jumps over ', 55); break;
     case 'enter': await tap(keyOf((k) => k.t === 'enter'), 70, 600); break;
     case 'space': for (let i = 0; i < 3; i++) await tap(keyOf((k) => k.t === 'space'), 70, 450); break;
@@ -2564,14 +2691,13 @@ async function runDemo(kind, id) {
       break;
     }
   }
-  if (alive()) demo.running = false;
 }
 
 /* ================================================================
    Export, reset, boot
    ================================================================ */
 function exportText() {
-  const lines = ['FX for FUTO Keyboard Lab feedback', ''];
+  const lines = ['keyfx Lab feedback', ''];
   const named = {};
   for (const sec of SECTIONS) for (const it of sec.items) named[it.id] = it.name;
   const withNotes = Object.entries(notes).filter(([, v]) => v && v.trim());
@@ -2581,10 +2707,10 @@ function exportText() {
     lines.push('');
   }
   // Only list values that differ from the defaults, then the full set for the module
-  const diff = [];
-  for (const id in cfg) for (const k in cfg[id]) if (JSON.stringify(cfg[id][k]) !== JSON.stringify(DEFAULTS[id][k])) diff.push(`- ${named[id] || id} ${k}: ${DEFAULTS[id][k]} → ${cfg[id][k]}`);
+  const diff = [], mine = userCfg();
+  for (const id in mine) for (const k in mine[id]) if (JSON.stringify(mine[id][k]) !== JSON.stringify(DEFAULTS[id][k])) diff.push(`- ${named[id] || id} ${k}: ${DEFAULTS[id][k]} → ${mine[id][k]}`);
   lines.push(diff.length ? 'Changed from defaults:' : 'No settings changed from defaults.');
-  lines.push(...diff, '', 'Full settings:', JSON.stringify(cfg));
+  lines.push(...diff, '', 'Full settings:', JSON.stringify(userCfg()));
   return lines.join('\n');
 }
 $('#exportBtn').addEventListener('click', () => {
@@ -2607,6 +2733,7 @@ $('#resetBtn').addEventListener('click', (e) => {
   if (!resetArmed) { resetArmed = true; b.textContent = 'Tap again to reset'; setTimeout(() => { resetArmed = false; b.textContent = 'Reset to defaults'; }, 2500); return; }
   resetArmed = false;
   b.textContent = 'Reset to defaults';
+  demo.cancel();
   cfg = clone(DEFAULTS);
   save();
   buildSettings();

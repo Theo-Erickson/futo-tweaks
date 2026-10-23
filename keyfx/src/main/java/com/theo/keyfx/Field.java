@@ -97,6 +97,16 @@ public final class Field {
         return (requires & hostCaps) == requires;
     }
 
+    /** The capabilities this field needs that the host lacks, or 0. */
+    public int missing(int hostCaps) {
+        return requires & ~hostCaps;
+    }
+
+    /** The key of the field that decides whether this one shows, or null. */
+    public String showKey() {
+        return showKey;
+    }
+
     /** Whether the field should show, given the section's current values. */
     public boolean visible(FxSettings settings, String sectionId) {
         if (showKey == null) return true;
