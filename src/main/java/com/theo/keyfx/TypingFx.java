@@ -7,7 +7,7 @@ import android.graphics.Shader;
 
 import java.util.ArrayList;
 
-/** What a normal key tap does: key pop, letter float, heat streak and neighbor wave. */
+/** What a normal key tap does: key pop, letter float, heat streak, neighbor wave, ripple and sparks. */
 final class TypingFx extends FxModule {
     private static final String G = "Typing";
 
@@ -18,6 +18,9 @@ final class TypingFx extends FxModule {
                         Field.range("grow", "Swell", 0, 16, 0.5f, "dp", 6),
                         Field.range("pullback", "Pullback time", 80, 1000, 10, "ms", 340),
                         Field.range("bounce", "Bounce", 0, 1, 0.05f, "", 0.35f),
+                        Field.toggle("scaleKey", "Scale the real key", true).requires(KeyFx.CAP_KEY_TRANSFORM),
+                        Field.range("keyScale", "Key growth", 1, 1.4f, 0.01f, "×", 1.12f)
+                                .when("scaleKey", "true").requires(KeyFx.CAP_KEY_TRANSFORM),
                         Field.strength()),
                 new Section("float", G, 110, "Letter float",
                         "The typed letter lifts off its key. Ghost sends up a see-through copy of the key that sways as it rises.",
@@ -42,12 +45,39 @@ final class TypingFx extends FxModule {
                         Field.range("radius", "Reach", 1, 4, 0.1f, "keys", 1.8f),
                         Field.range("speed", "Speed", 0.1f, 1.2f, 0.05f, "dp/ms", 0.35f),
                         Field.range("strength", "Intensity", 0, 1.5f, 0.05f, "×", 0.8f)),
+                new Section("ripple", G, 140, "Ripple", "A ring expands from where you touch.", true, false,
+                        Field.range("radius", "Size", 12, 80, 1, "dp", 36),
+                        Field.range("duration", "Duration", 150, 1000, 10, "ms", 380),
+                        Field.strength()),
+                new Section("sparks", G, 150, "Sparks", "A small burst of sparks flies off each press and falls.",
+                        true, false,
+                        Field.range("count", "Amount", 3, 30, 1, "", 10),
+                        Field.range("life", "Lifetime", 200, 1200, 10, "ms", 520),
+                        Field.range("gravity", "Gravity", 0, 800, 10, "dp/s²", 320),
+                        Field.strength()),
         };
     }
 
     // Heat level from 0 to 1, decaying over time
     private float heat;
     private long heatAt;
+    /** A key's pop on the real key, with the settings it started with. */
+    private static final class Press {
+        final FxKey k;
+        final long t0;
+        final float grow, pull, bounce, scale;
+
+        Press(FxKey k, long t0, float grow, float pull, float bounce, float scale) {
+            this.k = k;
+            this.t0 = t0;
+            this.grow = grow;
+            this.pull = pull;
+            this.bounce = bounce;
+            this.scale = scale;
+        }
+    }
+
+    private final ArrayList<Press> presses = new ArrayList<>();
 
     TypingFx(KeyFx fx) {
         super(fx);
@@ -56,7 +86,20 @@ final class TypingFx extends FxModule {
     @Override
     public void onKeyDown(FxKey k, float x, float y) {
         FxParts.pop(fx, k);
+        if ((fx.caps & KeyFx.CAP_KEY_TRANSFORM) != 0 && fx.on("pop") && fx.settings.b("pop", "scaleKey")) {
+            for (int i = 0; i < presses.size(); i++) {
+                if (presses.get(i).k == k) {
+                    presses.remove(i);
+                    i--;
+                }
+            }
+            presses.add(new Press(k, fx.now(), fx.D(70), fx.D(fx.settings.f("pop", "pullback")),
+                    fx.settings.f("pop", "bounce"), fx.settings.f("pop", "keyScale")));
+            fx.kick();
+        }
         if (fx.on("wave") && k.type != FxKey.NUM) wave(k);
+        if (fx.on("ripple")) ripple(x, y);
+        if (fx.on("sparks")) sparks(x, y);
     }
 
     @Override
@@ -79,6 +122,7 @@ final class TypingFx extends FxModule {
     public void reset() {
         heat = 0;
         heatAt = 0;
+        presses.clear();
     }
 
     // region Letter float
@@ -120,6 +164,41 @@ final class TypingFx extends FxModule {
                 return true;
             }
         });
+    }
+
+    // endregion
+
+    // region Key pop on the real key
+
+    /**
+     * The pop's swell, as FxParts.pop draws it: up to 1, then springing back through 0 (slightly
+     * below 0 while it bounces). NaN once it is over.
+     */
+    private static float popAmount(Press p, long elapsed) {
+        if (elapsed < p.grow) return Fx.easeOut(elapsed / p.grow);
+        final float u = (elapsed - p.grow) / p.pull;
+        if (u >= 1) return Float.NaN;
+        return (1 - u) * (float) Math.cos(u * Math.PI * (0.5 + 2.5 * p.bounce));
+    }
+
+    @Override
+    public void look(FxKey k, KeyLook out, long t) {
+        for (Press p : presses) {
+            if (p.k != k) continue;
+            final float a = popAmount(p, t - p.t0);
+            if (!Float.isNaN(a)) out.scaleBy(1 + (p.scale - 1) * a);
+        }
+    }
+
+    @Override
+    public boolean keysMoving(long t) {
+        for (int i = 0; i < presses.size(); i++) {
+            if (Float.isNaN(popAmount(presses.get(i), t - presses.get(i).t0))) {
+                presses.remove(i);
+                i--;
+            }
+        }
+        return !presses.isEmpty();
     }
 
     // endregion
@@ -200,6 +279,56 @@ final class TypingFx extends FxModule {
                     fx.roundRect(c, n.left, n.top, n.right, n.bottom, 9, fx.fill(Fx.alpha(fx.accent(), 0.32f * a)));
                 }
                 return alive;
+            }
+        });
+    }
+
+    // endregion
+
+    // region Ripple and sparks
+
+    private void ripple(final float x, final float y) {
+        final long t0 = fx.now();
+        final float life = fx.D(fx.settings.f("ripple", "duration")), r = fx.dp(fx.settings.f("ripple", "radius"));
+        final float s = fx.S("ripple");
+        fx.add(new Effect() {
+            @Override
+            public boolean draw(Canvas c, long t) {
+                final float p = (t - t0) / life;
+                if (p >= 1) return false;
+                c.drawCircle(x, y, Math.max(0.1f, r * Fx.easeOut(p)),
+                        fx.stroke(Fx.alpha(fx.accent(), 0.7f * (1 - p) * s), fx.dp(3 - 2 * p)));
+                return true;
+            }
+        });
+    }
+
+    private void sparks(final float x, final float y) {
+        final long t0 = fx.now();
+        final int n = Math.round(fx.settings.f("sparks", "count"));
+        final float lifeMs = fx.settings.f("sparks", "life"), life = fx.D(lifeMs);
+        final float g = fx.dp(fx.settings.f("sparks", "gravity")), s = fx.S("sparks");
+        final float[] vx = new float[n], vy = new float[n], r = new float[n];
+        for (int i = 0; i < n; i++) {
+            // Spread around the full circle, biased upward so sparks rise off the key
+            final double a = fx.rnd.nextDouble() * Math.PI * 2;
+            final float speed = fx.dp(fx.rand(60, 150));
+            vx[i] = (float) Math.cos(a) * speed;
+            vy[i] = (float) Math.sin(a) * speed - fx.dp(60);
+            r[i] = fx.dp(fx.rand(1.5f, 3));
+        }
+        fx.add(new Effect() {
+            @Override
+            public boolean draw(Canvas c, long t) {
+                final float p = (t - t0) / life;
+                if (p >= 1) return false;
+                // Seconds at normal speed, so the speed setting speeds up the flight too
+                final float e = p * lifeMs / 1000f;
+                final Paint paint = fx.fill(Fx.alpha(fx.accent(), (1 - p) * s));
+                for (int i = 0; i < n; i++) {
+                    c.drawCircle(x + vx[i] * e, y + vy[i] * e + 0.5f * g * e * e, r[i] * (1 - 0.5f * p), paint);
+                }
+                return true;
             }
         });
     }

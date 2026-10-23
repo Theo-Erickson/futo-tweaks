@@ -28,6 +28,8 @@ final class DeleteHoldFx extends FxModule {
                                 .when("button", "blackhole"),
                         Field.range("size", "Black hole size", 16, 60, 1, "dp", 34).when("button", "blackhole"),
                         Field.range("swirl", "Swirl speed", 0.2f, 3, 0.05f, "×", 1).when("letters", "swirl"),
+                        Field.toggle("shake", "Shake the key", true).when("button", "lava")
+                                .requires(KeyFx.CAP_KEY_TRANSFORM),
                         Field.strength()),
         };
     }
@@ -268,6 +270,22 @@ final class DeleteHoldFx extends FxModule {
         hold.end = fx.now();
         hold = null;
         fx.kick();
+    }
+
+    /** Lava shakes the real key with the same jitter its glow uses (hosts with CAP_KEY_TRANSFORM). */
+    private boolean shaking(Hold h) {
+        return h != null && "lava".equals(h.button) && fx.settings.b("delHold", "shake");
+    }
+
+    @Override
+    public void look(FxKey k, KeyLook out, long t) {
+        final Hold h = hold;
+        if (shaking(h) && h.k == k) out.move(h.jx, h.jy);
+    }
+
+    @Override
+    public boolean keysMoving(long t) {
+        return shaking(hold);
     }
 
     @Override
