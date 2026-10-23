@@ -2,10 +2,12 @@ package com.theo.futotweaks;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -41,6 +43,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -66,6 +69,7 @@ public class SettingsActivity extends Activity {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     // Each section's field views, to show and hide them as their conditions change
     private final Map<String, List<Object[]>> mFieldViews = new HashMap<>();
+    private static final String FXBOARD_URL = "https://github.com/Theo-Erickson/fxboard/releases";
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -121,12 +125,8 @@ public class SettingsActivity extends Activity {
         }
 
         String group = null;
-        final ArrayList<String> forkOnly = new ArrayList<>();
         for (final Section s : mSections) {
-            if (!s.supportedBy(Prefs.CAPS)) {
-                forkOnly.add(s.title);
-                continue;
-            }
+            if (!s.supportedBy(Prefs.CAPS)) continue; // listed in the Needs FXboard card instead
             if (!s.group.equals(group)) {
                 group = s.group;
                 list.addView(groupHeader(group));
@@ -136,8 +136,9 @@ public class SettingsActivity extends Activity {
         }
 
         list.addView(note("Changes apply right away, also while the keyboard is open. Effects turn off when "
-                + "Android's \"Remove animations\" setting is on."
-                + (forkOnly.isEmpty() ? "" : " Only in the FUTO fork: " + join(forkOnly) + ".")));
+                + "Android's \"Remove animations\" setting is on."));
+        final View needs = needsFxboardCard();
+        if (needs != null) list.addView(needs);
 
         final ScrollView scroll = new ScrollView(this);
         scroll.addView(list, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -199,7 +200,8 @@ public class SettingsActivity extends Activity {
 
     // region Generated cards
 
-    private View card(final Section s) {
+    /** An empty rounded card, as every section uses. */
+    private LinearLayout cardShell() {
         final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(14), dp(10), dp(14), dp(10));
@@ -211,6 +213,11 @@ public class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, dp(6), 0, dp(6));
         card.setLayoutParams(lp);
+        return card;
+    }
+
+    private View card(final Section s) {
+        final LinearLayout card = cardShell();
 
         final LinearLayout head = new LinearLayout(this);
         head.setGravity(Gravity.CENTER_VERTICAL);
@@ -323,6 +330,71 @@ public class SettingsActivity extends Activity {
                 return box;
             }
         }
+    }
+
+    /**
+     * Everything the schema offers that this module can't do, grouped by the capability it
+     * lacks, with why and a link to FXboard, which can. Null when there is nothing to list.
+     */
+    private View needsFxboardCard() {
+        final LinkedHashMap<Integer, List<String>> byCap = new LinkedHashMap<>();
+        for (final int cap : KeyFx.CAPS) byCap.put(cap, new ArrayList<String>());
+        boolean any = false;
+        for (final Section s : mSections) {
+            final int missing = s.missing(Prefs.CAPS);
+            if (missing != 0) {
+                any |= addTo(byCap, missing, s.title);
+                continue;
+            }
+            for (final Field f : s.fields) {
+                final int fm = f.missing(Prefs.CAPS);
+                if (fm == 0) continue;
+                // A field that only shows under an unsupported parent is listed through the parent
+                final Field parent = f.showKey() != null ? mSettings.field(s.id, f.showKey()) : null;
+                if (parent != null && parent.missing(Prefs.CAPS) != 0) continue;
+                any |= addTo(byCap, fm, s.title + ": " + f.label);
+            }
+        }
+        if (!any) return null;
+
+        final LinearLayout card = cardShell();
+        card.addView(text("Needs FXboard", 16, true));
+        card.addView(text("FXboard is FUTO Keyboard with keyfx built in. As a module, FX for FUTO Keyboard "
+                + "can't offer these:", 13, false));
+        for (final Map.Entry<Integer, List<String>> e : byCap.entrySet()) {
+            if (e.getValue().isEmpty()) continue;
+            final TextView head = text(KeyFx.capTitle(e.getKey()), 14, true);
+            head.setPadding(0, dp(12), 0, dp(2));
+            card.addView(head);
+            card.addView(text(KeyFx.capReason(e.getKey()), 13, false));
+            for (final String item : e.getValue()) {
+                final TextView line = text("\u00B7 " + item, 14, false);
+                line.setPadding(dp(8), dp(2), 0, 0);
+                card.addView(line);
+            }
+        }
+        card.addView(button("Get FXboard", new View.OnClickListener() {
+            @Override
+            public void onClick(final View v) {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(FXBOARD_URL)));
+                } catch (ActivityNotFoundException noBrowser) {
+                    Toast.makeText(SettingsActivity.this, FXBOARD_URL, Toast.LENGTH_LONG).show();
+                }
+            }
+        }));
+        return card;
+    }
+
+    /** Files item under the first capability it lacks, in KeyFx.CAPS order. */
+    private static boolean addTo(final Map<Integer, List<String>> byCap, final int missing, final String item) {
+        for (final Map.Entry<Integer, List<String>> e : byCap.entrySet()) {
+            if ((missing & e.getKey()) != 0) {
+                e.getValue().add(item);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void refreshVisibility(final String sectionId) {
@@ -462,15 +534,6 @@ public class SettingsActivity extends Activity {
         b.setText(label);
         b.setOnClickListener(click);
         return b;
-    }
-
-    private static String join(final List<String> items) {
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) sb.append(i == items.size() - 1 ? " and " : ", ");
-            sb.append(items.get(i).toLowerCase(Locale.US));
-        }
-        return sb.toString();
     }
 
     private int dp(final int value) {

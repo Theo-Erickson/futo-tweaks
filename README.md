@@ -106,7 +106,7 @@ Open the module's settings from LSPosed or Vector, or from the FX for FUTO Keybo
 - **Test field:** the box at the top stays in view, so you can type and swipe in it while you adjust settings.
 - **Import:** paste an export from the lab to copy its settings over. Section and setting names match the lab's, and anything the module doesn't have is skipped.
 
-A few lab settings need changes inside FUTO itself (the bloom accent popup, the hide animation, lighting up the predicted word in the suggestion bar). A module can't make those safely, so they come with [FXboard](https://github.com/Theo-Erickson/fxboard) and don't show here.
+A few lab settings need changes inside FUTO itself: scaling and shaking the real keys, fading their labels, the key-by-key show animation, lighting up the predicted word, the bloom accent popup and the hide animation. A module can't make those safely, so they come with [FXboard](https://github.com/Theo-Erickson/fxboard). The settings screen lists them at the bottom, under **Needs FXboard**.
 
 ## Related projects
 
