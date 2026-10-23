@@ -1,4 +1,4 @@
-# FUTO Tweaks
+# FX for FUTO Keyboard
 
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/theoerickson)
 [![Latest release](https://img.shields.io/github/v/release/Theo-Erickson/futo-tweaks?label=download)](https://github.com/Theo-Erickson/futo-tweaks/releases/latest)
@@ -7,9 +7,9 @@
 **An unofficial LSPosed / Vector module that adds keyboard effects and typing extras to the official [FUTO Keyboard](https://keyboard.futo.org).** It changes the keyboard at runtime, so you keep using FUTO's own app, with FUTO's updates, and get the effects on top.
 
 > [!IMPORTANT]
-> **Unofficial.** FUTO Tweaks is an independent module by Theo Erickson. It is not made, endorsed or supported by FUTO. Please report problems [here](https://github.com/Theo-Erickson/futo-tweaks/issues), not to FUTO.
+> **Unofficial.** FX for FUTO Keyboard is an independent module by Theo Erickson. It is not made, endorsed or supported by FUTO. Please report problems [here](https://github.com/Theo-Erickson/futo-tweaks/issues), not to FUTO.
 
-<!-- Media: a GIF of typing with effects on, e.g. <img src="docs/media/hero.gif" width="360" alt="FUTO Tweaks effects"> -->
+<!-- Media: a GIF of typing with effects on, e.g. <img src="docs/media/hero.gif" width="360" alt="FX for FUTO Keyboard effects"> -->
 
 ## Contents
 
@@ -29,14 +29,14 @@
 
 ## Summary
 
-FUTO Keyboard is an offline, private keyboard. FUTO Tweaks makes it more fun and a bit faster to edit with, without replacing it:
+FUTO Keyboard is an offline, private keyboard. FX for FUTO Keyboard makes it more fun and a bit faster to edit with, without replacing it:
 
 - **Effects while you type:** key pops, floating letters, backspace fire, black holes, swipe trails, letter hop and more, powered by [keyfx](https://github.com/Theo-Erickson/keyfx).
 - **Vertical spacebar cursor:** drag the spacebar up or down to move between lines.
 - **Hold backspace for whole words** at a pace you choose.
 - **Hide the keyboard navigation bar** on Android 15 and newer.
 
-Every feature has its own switch, and changes apply right away, even while the keyboard is open. FUTO Tweaks contains no FUTO code. It hooks the app you already have installed.
+Every feature has its own switch, and changes apply right away, even while the keyboard is open. FX for FUTO Keyboard contains no FUTO code. It hooks the app you already have installed.
 
 Don't have root? [FXboard](https://github.com/Theo-Erickson/fxboard) is a standalone keyboard with the same extras built in.
 
@@ -44,7 +44,7 @@ Don't have root? [FXboard](https://github.com/Theo-Erickson/fxboard) is a standa
 
 | | |
 |---|---|
-| **Latest APK** | [Releases page](https://github.com/Theo-Erickson/futo-tweaks/releases/latest), file `futo-tweaks-r<N>.apk` |
+| **Latest APK** | [Releases page](https://github.com/Theo-Erickson/futo-tweaks/releases/latest), file `fx-for-futo-r<N>.apk` |
 | **All versions** | [All releases](https://github.com/Theo-Erickson/futo-tweaks/releases) |
 | **Effects lab** | [Open the lab](https://theo-erickson.github.io/keyfx/) in a browser to design settings, then import them |
 | **Source** | [Download ZIP](https://github.com/Theo-Erickson/futo-tweaks/archive/refs/heads/main.zip) or `git clone https://github.com/Theo-Erickson/futo-tweaks.git` |
@@ -64,11 +64,11 @@ SHA-256: D6:26:CA:25:99:B1:13:EA:7E:11:6B:D4:E3:3F:F9:CA:89:5C:B7:88:2A:EF:42:1C
 
 ## Install
 
-1. Download `futo-tweaks-r<N>.apk` from the [latest release](https://github.com/Theo-Erickson/futo-tweaks/releases/latest) and install it.
-2. Open LSPosed or Vector, go to **Modules**, and enable **FUTO Tweaks**.
+1. Download `fx-for-futo-r<N>.apk` from the [latest release](https://github.com/Theo-Erickson/futo-tweaks/releases/latest) and install it.
+2. Open LSPosed or Vector, go to **Modules**, and enable **FX for FUTO Keyboard**.
 3. In the module's scope, tick **FUTO Keyboard** (whichever variant you have installed).
 4. Force stop FUTO Keyboard in Android's **Settings > Apps**, then open any text box to bring the keyboard back.
-5. Open FUTO Tweaks from your app drawer (or from the module list) and switch on the effects you want.
+5. Open FX for FUTO Keyboard from your app drawer (or from the module list) and switch on the effects you want.
 
 **Updating:** install the new APK over the old one, then force stop FUTO Keyboard again. Your settings are kept.
 
@@ -98,9 +98,9 @@ When one press removes a whole word (like undoing a swiped word), every letter g
 
 ## Settings
 
-<!-- Media: a screenshot of the settings screen, e.g. <img src="docs/media/settings.png" width="300" alt="FUTO Tweaks settings"> -->
+<!-- Media: a screenshot of the settings screen, e.g. <img src="docs/media/settings.png" width="300" alt="FX for FUTO Keyboard settings"> -->
 
-Open the module's settings from LSPosed or Vector, or from the FUTO Tweaks app icon.
+Open the module's settings from LSPosed or Vector, or from the FX for FUTO Keyboard app icon.
 
 - **Changes apply right away**, even while the keyboard is open.
 - **Test field:** the box at the top stays in view, so you can type and swipe in it while you adjust settings.
@@ -112,7 +112,7 @@ A few lab settings need changes inside FUTO itself (the bloom accent popup, the 
 
 | Project | What it is | Pick it if... |
 |---|---|---|
-| **FUTO Tweaks** (this repo) | An LSPosed / Vector module for the official FUTO Keyboard | you have root and want to keep FUTO's official app and updates |
+| **FX for FUTO Keyboard** (this repo) | An LSPosed / Vector module for the official FUTO Keyboard | you have root and want to keep FUTO's official app and updates |
 | [FXboard](https://github.com/Theo-Erickson/fxboard) | An FX keyboard: a fork of FUTO Keyboard with the extras built in | you don't have root, or want the effects a module can't add |
 | [keyfx](https://github.com/Theo-Erickson/keyfx) | The effects library both apps use, and the lab | you build keyboards, or want to design effect settings in a browser |
 | [FUTO Keyboard](https://keyboard.futo.org) (official) | The keyboard this module modifies. Not affiliated with this project | you want the keyboard as FUTO ships it |
@@ -120,7 +120,7 @@ A few lab settings need changes inside FUTO itself (the bloom accent popup, the 
 ## FAQ
 
 **Is this an official FUTO project?**
-No. FUTO Tweaks is an independent, unofficial module by Theo Erickson. It is not made, endorsed or supported by FUTO. Please don't send FUTO bug reports about it.
+No. FX for FUTO Keyboard is an independent, unofficial module by Theo Erickson. It is not made, endorsed or supported by FUTO. Please don't send FUTO bug reports about it.
 
 **Does it change or replace my FUTO Keyboard?**
 No. The FUTO Keyboard app on your phone stays exactly as installed. The module only changes how it behaves while it runs, and disabling the module in LSPosed (then force stopping FUTO) puts everything back.
@@ -148,7 +148,7 @@ Through [Ko-fi](https://ko-fi.com/theoerickson). It's optional, and every featur
 | Problem | Try this |
 |---|---|
 | Nothing changes after install | Check the module is enabled **and** FUTO Keyboard is ticked in its scope, then force stop FUTO Keyboard. |
-| Some features work and others don't | A FUTO update may have moved something. Open the LSPosed log, look for `FUTO Tweaks` lines, and include them in an issue. |
+| Some features work and others don't | A FUTO update may have moved something. Open the LSPosed log, look for `FX for FUTO Keyboard` lines, and include them in an issue. |
 | No effects at all | Check Android's **Settings > Accessibility > Remove animations** is off. |
 | The navigation bar is still there | That option needs Android 15 or newer. |
 
@@ -173,10 +173,10 @@ Nav bar hiding and the cursor position use only Android's `InputMethodService`. 
 
 ## Support
 
-FUTO Tweaks is free, with no ads and nothing locked. If you enjoy it, you can support the work on [Ko-fi](https://ko-fi.com/theoerickson). The same page supports keyfx.
+FX for FUTO Keyboard is free, with no ads and nothing locked. If you enjoy it, you can support the work on [Ko-fi](https://ko-fi.com/theoerickson). The same page supports keyfx.
 
 ## License
 
-FUTO Tweaks is licensed under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE). The `keyfx/` folder is also Apache-2.0 and keeps its own NOTICE. FUTO Tweaks contains no FUTO code.
+FX for FUTO Keyboard is licensed under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE). The `keyfx/` folder is also Apache-2.0 and keeps its own NOTICE. FX for FUTO Keyboard contains no FUTO code.
 
 FUTO and FUTO Keyboard are trademarks of FUTO Holdings, Inc. This project uses those names only to say which app the module works with and changes. It claims no rights to them, and is not affiliated with, endorsed by or sponsored by FUTO.

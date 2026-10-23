@@ -1,4 +1,4 @@
-// FUTO Tweaks: LSPosed / Vector module for FUTO Keyboard
+// FX for FUTO Keyboard: LSPosed / Vector module for FUTO Keyboard
 pluginManagement {
     repositories {
         google()

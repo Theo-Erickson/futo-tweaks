@@ -22,7 +22,7 @@ import de.robv.android.xposed.XposedBridge;
 final class Caret {
     private Caret() {}
 
-    private static final String TAG = "FutoTweaks: ";
+    private static final String TAG = "FX for FUTO Keyboard: ";
     private static volatile CursorAnchorInfo sInfo;
     private static boolean sHooked;
     private static final int[] sLoc = new int[2];

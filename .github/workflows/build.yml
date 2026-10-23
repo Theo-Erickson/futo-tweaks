@@ -1,4 +1,4 @@
-# Builds the FUTO Tweaks module APK.
+# Builds the FX for FUTO Keyboard module APK.
 # Pull requests get the APK attached to the run; pushes to main also publish a release.
 # Signing uses the same four secrets as the FUTO fork (FORK_KEYSTORE_B64 and friends).
 # Without them the build still works, signed with a throwaway debug key.
@@ -48,11 +48,11 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/*.apk "out/futo-tweaks-r${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/*.apk "out/fx-for-futo-r${{ github.run_number }}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: futo-tweaks-r${{ github.run_number }}
+          name: fx-for-futo-r${{ github.run_number }}
           path: out/*.apk
 
       - name: Publish release
@@ -60,5 +60,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: r${{ github.run_number }}
-          name: FUTO Tweaks r${{ github.run_number }}
+          name: FX for FUTO Keyboard r${{ github.run_number }}
           files: out/*.apk

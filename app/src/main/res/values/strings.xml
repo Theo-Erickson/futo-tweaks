@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FUTO Tweaks</string>
+    <string name="app_name">FX for FUTO Keyboard</string>
     <string name="module_description">FUTO Keyboard: drag the spacebar up and down to change lines, hide the keyboard navigation bar, and add typing, swipe and keyboard animation effects.</string>
 </resources>

@@ -56,7 +56,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * update breaks one feature the others keep working, and typing is never interrupted.
  */
 public class MainHook implements IXposedHookLoadPackage {
-    private static final String TAG = "FutoTweaks: ";
+    private static final String TAG = "FX for FUTO Keyboard: ";
 
     private static final Set<String> TARGETS = new HashSet<>(Arrays.asList(
             "org.futo.inputmethod.latin",

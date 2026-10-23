@@ -86,7 +86,7 @@ public class SettingsActivity extends Activity {
         header.setPadding(dp(16), dp(8), dp(16), dp(8));
         final LinearLayout titleRow = new LinearLayout(this);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        final TextView title = text("FUTO Tweaks", 22, true);
+        final TextView title = text("FX for FUTO Keyboard", 22, true);
         titleRow.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         titleRow.addView(button("Import", new View.OnClickListener() {
             @Override
@@ -355,7 +355,7 @@ public class SettingsActivity extends Activity {
         box.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         new AlertDialog.Builder(this)
-                .setTitle("Import from FUTO Tweaks Lab")
+                .setTitle("Import from FX for FUTO Keyboard Lab")
                 .setMessage("In the lab, tap Export, copy everything, and paste it here. Settings the module "
                         + "doesn't have are skipped.")
                 .setView(box)

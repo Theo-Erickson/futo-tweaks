@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>[hidden]{display:none!important}body{margin:0}</style>
-<title>FUTO Tweaks Lab</title>
+<title>FX for FUTO Keyboard Lab</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -398,8 +398,8 @@ input[type="color"] { width: 44px; height: 30px; border: 1px solid var(--line); 
 
 <div class="page">
   <header class="intro">
-    <span class="eyebrow">FUTO Tweaks 1.1 · effect lab</span>
-    <h1>FUTO Tweaks Lab</h1>
+    <span class="eyebrow">FX for FUTO Keyboard 1.1 · effect lab</span>
+    <h1>FX for FUTO Keyboard Lab</h1>
     <p>Tune every effect against a mock of FUTO Keyboard. Tap the keyboard button in the corner to bring it up while you scroll, or use Preview on any card. Type, swipe words, hold e or a for accents, drag the spacebar, and hold backspace.</p>
     <div class="intro-actions">
       <button class="btn primary" id="exportBtn" type="button">Export settings</button>
@@ -444,7 +444,7 @@ input[type="color"] { width: 44px; height: 30px; border: 1px solid var(--line); 
 /* ================================================================
    Settings model
    Values mirror the module's knobs, so an export can be dropped
-   straight into the next FUTO Tweaks build as defaults.
+   straight into the next FX for FUTO Keyboard build as defaults.
    ================================================================ */
 const DEFAULTS = {
   global: { accent: '#8AB4F8', kbTheme: 'dark', speed: 1, intensity: 1 },
@@ -2571,7 +2571,7 @@ async function runDemo(kind, id) {
    Export, reset, boot
    ================================================================ */
 function exportText() {
-  const lines = ['FUTO Tweaks Lab feedback', ''];
+  const lines = ['FX for FUTO Keyboard Lab feedback', ''];
   const named = {};
   for (const sec of SECTIONS) for (const it of sec.items) named[it.id] = it.name;
   const withNotes = Object.entries(notes).filter(([, v]) => v && v.trim());

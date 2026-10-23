@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the FUTO Tweaks APK without the Android SDK or Gradle.
+# Builds the FX for FUTO Keyboard APK without the Android SDK or Gradle.
 #
 # Toolchain (all from GitHub):
 #   APKTOOL_JAR  apktool 2.12.1, for its bundled aapt2 and android-framework.jar
@@ -67,5 +67,5 @@ if [ -n "${KS_FILE:-}" ]; then
     SIGN_ARGS=(--ks "$KS_FILE" --ksAlias "$KS_ALIAS" --ksPass "$KS_PASS" --ksKeyPass "$KS_KEY_PASS")
 fi
 java -jar "$SIGNER_JAR" -a "$OUT/unsigned.apk" -o "$OUT/signed" --allowResign "${SIGN_ARGS[@]}" >/dev/null
-cp "$OUT"/signed/*.apk "$OUT/futo-tweaks-$VERSION_NAME.apk"
-echo "Built $OUT/futo-tweaks-$VERSION_NAME.apk"
+cp "$OUT"/signed/*.apk "$OUT/fx-for-futo-$VERSION_NAME.apk"
+echo "Built $OUT/fx-for-futo-$VERSION_NAME.apk"

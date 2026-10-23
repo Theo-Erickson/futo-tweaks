@@ -8,7 +8,7 @@ It uses plain Android graphics only, with no code from any particular keyboard, 
 
 ## Projects that use keyfx
 
-- [FUTO Tweaks](https://github.com/Theo-Erickson/futo-tweaks): an unofficial Vector / LSPosed module that adds keyfx to the stock FUTO Keyboard app.
+- [FX for FUTO Keyboard](https://github.com/Theo-Erickson/futo-tweaks): an unofficial Vector / LSPosed module that adds keyfx to the stock FUTO Keyboard app.
 - [FXboard](https://github.com/Theo-Erickson/fxboard): an FX keyboard, a fork of FUTO Keyboard with keyfx built in.
 
 The effects were designed in the lab (`lab/`), a mock keyboard in a single HTML page with a slider and preview for every setting. Its section ids and keys match keyfx's settings, so its export imports straight into a host's settings.
@@ -76,7 +76,7 @@ If you enjoy keyfx, you can support it on [Ko-fi](https://ko-fi.com/theoerickson
 ```mermaid
 flowchart LR
   K["keyfx<br/>effects library<br/>Apache-2.0 + NOTICE"]
-  T["FUTO Tweaks<br/>unofficial Vector/LSPosed module<br/>Apache-2.0"]
+  T["FX for FUTO Keyboard<br/>unofficial Vector/LSPosed module<br/>Apache-2.0"]
   F["FXboard<br/>fork of FUTO Keyboard<br/>FUTO Source First 1.1"]
   U["FUTO Keyboard (official)<br/>FUTO Source First 1.1"]
   K -- "git subtree" --> T
@@ -88,9 +88,9 @@ flowchart LR
 | Project | License | Notes |
 |---|---|---|
 | keyfx | Apache-2.0 | Ship the `NOTICE` file with any distribution. |
-| FUTO Tweaks | Apache-2.0 | Contains no FUTO code; it hooks the official app at runtime. |
+| FX for FUTO Keyboard | Apache-2.0 | Contains no FUTO code; it hooks the official app at runtime. |
 | FXboard | FUTO Source First 1.1 | The fork as a whole. The `keyfx/` folder inside it keeps its Apache-2.0 license and NOTICE. |
 
 keyfx is licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Theo Erickson.
 
-FUTO Tweaks and FXboard are not affiliated with or endorsed by FUTO.
+FX for FUTO Keyboard and FXboard are not affiliated with or endorsed by FUTO.
