@@ -10,7 +10,7 @@
 
 <!-- Media: a short GIF of a few effects in action goes here, e.g. <img src="docs/media/hero.gif" width="360" alt="keyfx effects while typing"> -->
 
-keyfx is the engine behind [FX for FUTO Keyboard](https://github.com/Theo-Erickson/futo-tweaks), and is being built into [FXboard](https://github.com/Theo-Erickson/fxboard).
+keyfx is the engine behind [FX for FUTO Keyboard](https://github.com/Theo-Erickson/futo-tweaks), and runs inside [FXboard](https://github.com/Theo-Erickson/fxboard), which draws its real keys through keyfx and gets FUTO's exact swiped word. A few effects (the suggestion bar highlight, bloom popup and hide animation) are still to come there.
 
 ## Contents
 
@@ -44,7 +44,7 @@ keyfx is a library, so it has no APK of its own. To try the effects on a phone, 
 | I want to... | Get this |
 |---|---|
 | Keep the official FUTO Keyboard and add effects (root with LSPosed or Vector) | [FX for FUTO Keyboard releases](https://github.com/Theo-Erickson/futo-tweaks/releases) |
-| Install a standalone keyboard with effects built in (no root; keyfx is still being wired in) | [FXboard releases](https://github.com/Theo-Erickson/fxboard/releases) |
+| Install a standalone keyboard with effects built in (no root; a few effects are still to come) | [FXboard releases](https://github.com/Theo-Erickson/fxboard/releases) |
 | Try the effects in a browser and design my own settings | [Open the lab](https://theo-erickson.github.io/keyfx/) (runs in any browser, phone included) |
 | Use keyfx in my own keyboard | [Adding keyfx to a project](#adding-keyfx-to-a-project) |
 | Get the source | [Download ZIP](https://github.com/Theo-Erickson/keyfx/archive/refs/heads/main.zip) or `git clone https://github.com/Theo-Erickson/keyfx.git` |

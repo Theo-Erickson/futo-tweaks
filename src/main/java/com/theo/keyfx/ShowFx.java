@@ -11,6 +11,7 @@ import java.util.IdentityHashMap;
 /**
  * Keyboard show and hide animations. Both work from a snapshot of the keyboard: the host hides
  * the real view, keyfx animates pieces of the snapshot, then onDone lets the host show it again.
+ * Hosts with CAP_KEY_TRANSFORM can instead animate each real key through look(), with no snapshot.
  */
 final class ShowFx extends FxModule {
     private static final String G = "Keyboard show and hide";

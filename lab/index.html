@@ -967,9 +967,12 @@ function subseqCount(word, seq) { // how many leading letters of word appear in 
   }
   return n;
 }
-function litLetters(word, seq) { // raw letters lit: a repeat of the previous letter is lit when that one was
+// raw letters lit: non-letters (the apostrophe in "don't") are skipped, not counted; a repeat of the
+// previous letter is lit when that one was. The highlight loop already counts only letters.
+function litLetters(word, seq) {
   let j = 0, n = 0, prev = null;
   for (const ch of word) {
+    if (!/\p{L}/u.test(ch)) continue;
     if (ch === prev) { n++; continue; }
     prev = ch;
     const at = seq.indexOf(ch, j);
