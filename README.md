@@ -86,7 +86,7 @@ All effects come from [keyfx](https://github.com/Theo-Erickson/keyfx) and its la
 
 | Group | Effects |
 |---|---|
-| Typing | Key pop, letter float (rise, grow or ghost key), heat streak, neighbor wave |
+| Typing | Key pop, letter float (rise, grow or ghost key), heat streak, neighbor wave, ripple, sparks |
 | Special keys | Enter sweep; spacebar stars, puff or shimmer; backspace fire, slash or shatter, with the deleted letters burning, splitting or shattering too |
 | Backspace hold | The key becomes a black hole, lava, an opening box or a hole, and the deleted letters swirl, fly on curves, or get one press each |
 | Swipe trail | Key trace, comet, ink brush, stardust |
