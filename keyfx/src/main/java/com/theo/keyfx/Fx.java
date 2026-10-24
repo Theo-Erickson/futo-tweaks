@@ -105,9 +105,10 @@ public final class Fx {
 
     /**
      * How many leading letters of the guessed word are lit by the swipe, counting raw letters and
-     * ignoring case. A letter that repeats the one before it is lit exactly when that one was;
-     * any other letter must be crossed, in order, after the previous crossing. Matches the lab's
-     * litLetters(word, seq).
+     * ignoring case. Non-letters (an apostrophe in "don't") are skipped: not counted, and they
+     * neither stop the count nor change which letter is "previous". A letter that repeats the
+     * previous letter is lit exactly when that one was; any other letter must be crossed, in
+     * order, after the previous crossing. Matches the lab's litLetters(word, seq).
      */
     public static int litLetters(String guess, String crossed) {
         if (guess == null || crossed == null) return 0;
@@ -116,6 +117,7 @@ public final class Fx {
         for (int i = 0; i < g.length(); ) {
             final int cp = g.codePointAt(i);
             i += Character.charCount(cp);
+            if (!Character.isLetter(cp)) continue;
             if (cp == prev) {
                 n++; // the previous letter was lit, or we would have stopped
                 continue;

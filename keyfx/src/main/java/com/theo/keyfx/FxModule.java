@@ -71,7 +71,9 @@ public abstract class FxModule {
 
     /**
      * The keyboard appeared. A module that animates it from the snapshot returns true and calls
-     * onDone once the real keys may show again. The snapshot covers layout.keyboard exactly.
+     * onDone once the real keys may show again. The snapshot covers layout.keyboard exactly. It may
+     * be null for hosts that need none (see KeyFx.showNeedsSnapshot()); the module then animates the
+     * real keys through look().
      */
     public boolean onShow(Bitmap snapshot, Runnable onDone) {
         return false;

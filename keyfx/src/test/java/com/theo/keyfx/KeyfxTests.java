@@ -88,6 +88,8 @@ public final class KeyfxTests {
         check(Fx.litLetters("Hello", "h") == 1, "case doesn't matter");
         check(Fx.litLetters("", "abc") == 0 && Fx.litLetters(null, "abc") == 0, "no guess, nothing lit");
         check(Fx.litLetters("abc", null) == 0, "nothing crossed, nothing lit");
+        check(Fx.litLetters("don't", "dont") == 4, "an apostrophe is skipped, not counted");
+        check(Fx.litLetters("don't", "don") == 3, "the count does not stop at the apostrophe's position");
         check(Fx.litLetters("abc", "") == 0, "an empty swipe lights nothing");
         check(Fx.litLetters("aba", "ab") == 2, "a repeat that is not consecutive needs its own crossing");
         check(Fx.litLetters("aba", "aba") == 3, "a repeat crossed again counts");
