@@ -33,9 +33,12 @@ final class DeleteHoldFx extends FxModule {
                         Field.toggle("shake", "Shake the key", true).when("button", "lava")
                                 .requires(KeyFx.CAP_KEY_TRANSFORM),
                         // The three word fields only change which text the host deletes; keyfx declares them
-                        Field.toggle("words", "After a few letters, delete whole words (like the module)", true),
-                        Field.range("wordsAfter", "Switch to words after", 1, 30, 1, "letters", 8).when("words", "true"),
-                        Field.range("wordPace", "Time per word", 80, 600, 10, "ms", 220).when("words", "true"),
+                        Field.toggle("words", "After a few letters, delete whole words (like the module)", true)
+                                .requires(KeyFx.CAP_WORD_DELETE),
+                        Field.range("wordsAfter", "Switch to words after", 1, 30, 1, "letters", 8)
+                                .when("words", "true").requires(KeyFx.CAP_WORD_DELETE),
+                        Field.range("wordPace", "Time per word", 80, 600, 10, "ms", 220)
+                                .when("words", "true").requires(KeyFx.CAP_WORD_DELETE),
                         Field.strength()),
         };
     }
