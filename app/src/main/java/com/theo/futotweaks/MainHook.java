@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
 import com.theo.keyfx.FxKey;
@@ -86,6 +87,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int sWordsAfter = 8;
     private static long sWordPaceMs = 220;
     private static boolean sAnimationsOn = true;
+    // A password field is being typed in: keyfx stays off and its text is never read
+    private static boolean sPrivateField;
     private static long sLongPressMs = 300;
 
     // Keyboard view position in the layer (the IME window root), updated at every touch-down
@@ -238,6 +241,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 // No Material You palette: keyfx keeps its default blue
             }
             fx.setEnabled(sAnimationsOn);
+            fx.setPrivateField(sPrivateField);
             root.getOverlay().add(fx);
             XposedHelpers.setAdditionalInstanceField(root, FX_FIELD, fx);
         }
@@ -328,6 +332,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             sIme = (InputMethodService) param.thisObject;
                             refreshPrefs(false);
                             applyNavBar(sIme);
+                            final EditorInfo info = (EditorInfo) param.args[0];
+                            sPrivateField = info != null && KeyFx.isPrivateInput(info.inputType);
+                            if (sFx != null) sFx.setPrivateField(sPrivateField);
                             final InputConnection ic = sIme.getCurrentInputConnection();
                             hookConnectionClass(ic);
                             Caret.request(ic);
@@ -857,7 +864,8 @@ public class MainHook implements IXposedHookLoadPackage {
             return;
         }
         final String before = Caret.textBefore(ic);
-        sDelBefore = before;
+        // Kept only for effects: word mode alone (in a password field, say) holds on to no text
+        sDelBefore = wantEffects ? before : null;
         if (wantEffects) {
             final View view = sKeyboardView.get();
             sDelLetters = Caret.lettersBefore(before, Caret.WINDOW, view != null ? view.getRootView() : null);
