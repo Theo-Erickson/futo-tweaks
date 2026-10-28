@@ -105,6 +105,8 @@ fx.setLayout(FxLayout layout);          // keys + keyboard rect + suggestion rec
 fx.reload();                            // re-read settings (live reload)
 fx.setSystemAccent(int color);          // Material You accent for accent = "system"
 fx.setEnabled(boolean animationsOn);    // off when Android's "Remove animations" is on
+fx.setPrivateField(KeyFx.isPrivateInput(editorInfo.inputType));  // password fields: no effects at all
+fx.isEnabled();                         // false when either is off: send no events, read no text
 
 // Events
 fx.keyDown(FxKey k, float x, float y);
@@ -133,7 +135,8 @@ KeyFx.capTitle(int cap); KeyFx.capReason(int cap);  // wording for settings scre
 1. **Attach.** Create a `KeyFx` and add it to an overlay that covers the keyboard window.
 2. **Layout.** Build an `FxLayout` of `FxKey`s in the Drawable's coordinates, with the keyboard and suggestion bar rectangles, and call `setLayout()` whenever the keyboard changes (new layout, rotation, symbols page).
 3. **Events.** Call the event methods from the points where your keyboard handles touches, typed keys, backspace and swipes.
-4. **Capabilities.** Declare what your host can do beyond drawing on top, with the `KeyFx.CAP_*` flags. Settings and sections that need a missing flag are hidden from that host's settings screen.
+4. **Private fields.** When input starts, call `setPrivateField(KeyFx.isPrivateInput(editorInfo.inputType))`. In password fields, shown or hidden, keyfx then draws nothing, so no effect gives away what is typed. Check `isEnabled()` before reading the app's text for backspace effects, so nothing is read there either.
+5. **Capabilities.** Declare what your host can do beyond drawing on top, with the `KeyFx.CAP_*` flags. Settings and sections that need a missing flag are hidden from that host's settings screen.
 
    | Flag | Lets keyfx |
    |---|---|
@@ -145,7 +148,7 @@ KeyFx.capTitle(int cap); KeyFx.capReason(int cap);  // wording for settings scre
 
    Hosts with any of the first three also call `setHost()`, so keyfx can ask them to redraw.
 
-5. **Settings.** keyfx reads one `SharedPreferences`, keys `"<sectionId>.<fieldKey>"`, with `"<sectionId>.on"` for sections that can be switched off. Ranges are floats and choices are strings. `Section` and `Field` describe every setting, so a host can generate its settings screen from them. Call `reload()` after a change to apply it at once.
+6. **Settings.** keyfx reads one `SharedPreferences`, keys `"<sectionId>.<fieldKey>"`, with `"<sectionId>.on"` for sections that can be switched off. Ranges are floats and choices are strings. `Section` and `Field` describe every setting, so a host can generate its settings screen from them. Call `reload()` after a change to apply it at once.
 
 ## Adding keyfx to a project
 
