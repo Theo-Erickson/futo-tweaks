@@ -70,6 +70,12 @@ public abstract class FxModule {
     public void onCursorMove(float x, float y) {}
 
     /**
+     * The host moved the cursor in trackpad mode: dx characters, dy lines (only the sign matters;
+     * effects step once per call). Hosts that don't send it leave effects following the finger.
+     */
+    public void onCursorStep(int dx, int dy) {}
+
+    /**
      * The keyboard appeared. A module that animates it from the snapshot returns true and calls
      * onDone once the real keys may show again. The snapshot covers layout.keyboard exactly. It may
      * be null for hosts that need none (see KeyFx.showNeedsSnapshot()); the module then animates the

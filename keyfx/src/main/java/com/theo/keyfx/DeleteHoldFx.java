@@ -1,16 +1,18 @@
 package com.theo.keyfx;
 
 import android.graphics.Canvas;
+import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
 
 import java.util.ArrayList;
 
 /**
- * Holding backspace, in two layers: what the key turns into while held (black hole, lava,
- * a box that opens, a hole it fades into), and how each deleted letter gets to it.
+ * Holding backspace, in two layers: what the key turns into while held (black hole, lava, portal,
+ * a box that opens, a hole it fades into), and how each deleted letter gets to it (swirl, vacuum curves, tractor beam, or one press each).
  */
 final class DeleteHoldFx extends FxModule {
 
@@ -20,9 +22,9 @@ final class DeleteHoldFx extends FxModule {
                         "Two layers: what the key turns into while held, and how each deleted letter gets to it.",
                         true, true,
                         Field.choice("button", "Key while held", "blackhole", "blackhole:Black hole", "lava:Lava rumble",
-                                "box:Opens like a box", "void:Fades into a hole", "none:None"),
+                                "box:Opens like a box", "void:Fades into a hole", "portal:Portal", "none:None"),
                         Field.choice("letters", "Deleted letters", "swirl", "swirl:Swirl in", "vacuum:Vacuum on curves",
-                                "press:One press each"),
+                                "beam:Tractor beam", "press:One press each"),
                         Field.range("flight", "Letter travel time", 300, 2400, 10, "ms", 1100).whenNot("letters", "press"),
                         Field.range("offset", "Black hole position, key to center", 0, 1, 0.01f, "", 0)
                                 .when("button", "blackhole"),
@@ -30,6 +32,10 @@ final class DeleteHoldFx extends FxModule {
                         Field.range("swirl", "Swirl speed", 0.2f, 3, 0.05f, "×", 1).when("letters", "swirl"),
                         Field.toggle("shake", "Shake the key", true).when("button", "lava")
                                 .requires(KeyFx.CAP_KEY_TRANSFORM),
+                        // The three word fields only change which text the host deletes; keyfx declares them
+                        Field.toggle("words", "After a few letters, delete whole words (like the module)", true),
+                        Field.range("wordsAfter", "Switch to words after", 1, 30, 1, "letters", 8).when("words", "true"),
+                        Field.range("wordPace", "Time per word", 80, 600, 10, "ms", 220).when("words", "true"),
                         Field.strength()),
         };
     }
@@ -48,7 +54,8 @@ final class DeleteHoldFx extends FxModule {
         long end, lastLaunch;
         float jx, jy;
         final ArrayList<Flying> parts = new ArrayList<>();
-        final ArrayList<float[]> bubbles = new ArrayList<>(); // x, y, r, t0, speed
+        final ArrayList<float[]> bubbles = new ArrayList<>(); // x, y, r, t0 (since hold start), speed
+        final ArrayList<float[]> motes = new ArrayList<>(); // angle, distance, t0 (since hold start)
 
         Hold(FxKey k) {
             this.k = k;
@@ -89,6 +96,8 @@ final class DeleteHoldFx extends FxModule {
                 drawBox(c, end != 0 ? 1 - Fx.easeOut(closing) : Fx.easeOut(held / fx.D(200)), s);
             } else if ("void".equals(button)) {
                 drawVoid(c, end != 0 ? 1 - Fx.easeOut(closing) : Fx.easeOut(held / fx.D(250)), s);
+            } else if ("portal".equals(button)) {
+                drawPortal(c, tx, ty, fx.dp(Fx.lerp(10, 26, grow)) * (1 - Fx.easeIn(closing)), t, s);
             }
 
             final float flight = fx.D(fx.settings.f("delHold", "flight")), swirl = fx.settings.f("delHold", "swirl");
@@ -103,7 +112,23 @@ final class DeleteHoldFx extends FxModule {
                     continue;
                 }
                 float x, y, sc, rot;
-                if ("swirl".equals(letters)) {
+                if ("beam".equals(letters)) {
+                    // Tractor beam: drawn straight in along a cone of light, wobbling as it goes
+                    final float p = Fx.easeIn(u);
+                    x = Fx.lerp(q.sx, tx, p) + (float) Math.sin(u * 20) * fx.dp(3) * (1 - u);
+                    y = Fx.lerp(q.sy, ty, p);
+                    sc = 1 - 0.7f * p;
+                    rot = (float) Math.sin(u * 14) * 0.2f;
+                    final float nx = -(ty - q.sy), ny = tx - q.sx;
+                    final float hy = (float) Math.hypot(nx, ny), nl = hy == 0 ? 1 : hy;
+                    final float wv = fx.dp(14 * (1 - p) + 3);
+                    final Path cone = fx.path();
+                    cone.moveTo(tx, ty);
+                    cone.lineTo(x + nx / nl * wv, y + ny / nl * wv);
+                    cone.lineTo(x - nx / nl * wv, y - ny / nl * wv);
+                    cone.close();
+                    c.drawPath(cone, fx.fill(Fx.alpha(fx.accent(), 0.16f * (1 - u * 0.5f) * s)));
+                } else if ("swirl".equals(letters)) {
                     final float dist = q.d0 * (float) Math.pow(1 - u, 1.4);
                     final float ang = q.a0 + u * (float) Math.PI * 3 * swirl;
                     x = tx + (float) Math.cos(ang) * dist;
@@ -128,11 +153,47 @@ final class DeleteHoldFx extends FxModule {
             if ("lava".equals(button)) FxParts.emberBurst(fx, x, y - fx.dp(6), s);
             else if ("box".equals(button) || "void".equals(button)) FxParts.ringPop(fx, x, y, fx.dp(12), s * 0.6f);
             else if ("blackhole".equals(button)) FxParts.ringPop(fx, x, y, fx.dp(8), s * 0.4f);
+            else if ("portal".equals(button)) FxParts.ringPop(fx, x, y, fx.dp(14), s * 0.6f);
+        }
+
+        /** Portal: spinning rings around a glowing center, with motes pulled inward. */
+        private void drawPortal(Canvas c, float x, float y, float r, long t, float s) {
+            if (r <= fx.dp(0.5f)) return;
+            final float spin = (t - start) / 400f;
+            if (end == 0 && fx.rnd.nextFloat() < 0.5f) {
+                motes.add(new float[] { fx.rand(0, (float) Math.PI * 2), r * 2.4f, t - start });
+            }
+            final Paint g = fx.fill(0xFFFFFFFF);
+            g.setShader(new RadialGradient(x, y, r,
+                    new int[] { Fx.alpha(0xFFFFFFFF, 0.9f * s), Fx.alpha(fx.accent(), 0.8f * s), Fx.alpha(0xFF7A3CFF, 0) },
+                    new float[] { 0, 0.35f, 1 }, Shader.TileMode.CLAMP));
+            c.drawCircle(x, y, r, g);
+            for (int i = 0; i < 3; i++) {
+                final Paint ring = fx.stroke(Fx.alpha(i == 1 ? 0xFFB98CFF : fx.accent(), (0.7f - i * 0.15f) * s), fx.dp(2));
+                ring.setPathEffect(new DashPathEffect(new float[] { fx.dp(6 + i * 3), fx.dp(5) },
+                        -spin * fx.dp(20 + i * 12) * (i % 2 == 1 ? -1 : 1)));
+                c.drawCircle(x, y, r * (1 + i * 0.28f), ring);
+                ring.setPathEffect(null);
+            }
+            final Paint dot = fx.fill(0xFFFFFFFF);
+            for (int i = 0; i < motes.size(); i++) {
+                final float[] m = motes.get(i);
+                final float u = ((t - start) - m[2]) / 700f;
+                if (u >= 1) {
+                    motes.remove(i);
+                    i--;
+                    continue;
+                }
+                final float d = m[1] * (1 - Fx.easeIn(u)), a = m[0] + u * 2;
+                dot.setColor(Fx.alpha(fx.accent(), (1 - u) * s));
+                final float mx = x + (float) Math.cos(a) * d, my = y + (float) Math.sin(a) * d;
+                c.drawRect(mx - fx.dp(1), my - fx.dp(1), mx + fx.dp(1), my + fx.dp(1), dot);
+            }
         }
 
         private void drawBlackHole(Canvas c, float x, float y, float r, long t, float s) {
             if (r <= fx.dp(0.5f)) return;
-            final float spin = t / 1000f * 3 * fx.settings.f("delHold", "swirl");
+            final float spin = (t - start) / 1000f * 3 * fx.settings.f("delHold", "swirl");
             c.save();
             c.translate(x, y);
             // Accretion disk: tilted rings rotating around the core
@@ -167,12 +228,12 @@ final class DeleteHoldFx extends FxModule {
             c.drawRect(k.left, k.top, k.right, k.bottom, g);
             if (end == 0 && fx.rnd.nextFloat() < 0.35f * I) {
                 bubbles.add(new float[] { fx.rand(k.left + fx.dp(5), k.right - fx.dp(5)), k.bottom,
-                        fx.dp(fx.rand(1.5f, 4)), t, fx.dp(fx.rand(20, 45)) });
+                        fx.dp(fx.rand(1.5f, 4)), t - start, fx.dp(fx.rand(20, 45)) });
             }
             final Paint ring = fx.stroke(Fx.alpha(0xFFFFE696, 0.8f * I * s), fx.dp(1));
             for (int i = 0; i < bubbles.size(); i++) {
                 final float[] b = bubbles.get(i);
-                final float y = b[1] - b[4] * (t - b[3]) / 1000f;
+                final float y = b[1] - b[4] * ((t - start) - b[3]) / 1000f;
                 if (y < k.top + fx.dp(4)) {
                     bubbles.remove(i);
                     i--;

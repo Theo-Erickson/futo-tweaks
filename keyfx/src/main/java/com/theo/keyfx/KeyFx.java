@@ -91,7 +91,7 @@ public final class KeyFx extends Drawable {
     public static final Section PICK = new Section("pick", "Swipe word", 500, "Swipe letter picking",
             "Which letters of a swipe count for letter hop and constellation. Key trace still lights every key you cross.",
             false, true,
-            Field.choice("mode", "Pick letters", "corners", "corners:Where you turn", "dwell:Where you pause",
+            Field.choice("mode", "Pick letters", "dwell", "corners:Where you turn", "dwell:Where you pause",
                     "all:Every key crossed"),
             Field.range("angle", "Turn needed", 30, 120, 1, "°", 55).when("mode", "corners"),
             Field.range("dwell", "Pause needed", 20, 300, 5, "ms", 90).when("mode", "dwell"));
@@ -145,7 +145,7 @@ public final class KeyFx extends Drawable {
     public KeyFx(float density, SharedPreferences prefs, int caps) {
         this.density = density;
         this.caps = caps;
-        this.settings = new FxSettings(prefs, schema());
+        this.settings = new FxSettings(prefs, schema(), caps);
         this.modules = Modules.create(this);
         fill.setStyle(Paint.Style.FILL);
         stroke.setStyle(Paint.Style.STROKE);
@@ -268,14 +268,14 @@ public final class KeyFx extends Drawable {
 
     /**
      * Where to put n accents for a long press on k (hosts with CAP_POPUP_LAYOUT). With the bloom
-     * layout, fills outXY with each accent's center (x0, y0, x1, y1, ...) inside bounds and returns
-     * true; returns false for the row layout, meaning the host lays it out as usual.
+     * layouts (bloom, wheel, column, grid), fills outXY with each accent's center (x0, y0, x1, y1,
+     * ...) inside bounds and returns true; returns false for the row layout, meaning the host lays
+     * it out as usual.
      */
     public boolean popupLayout(FxKey k, int n, RectF bounds, float[] outXY) {
-        if (!enabled || k == null || n <= 0 || outXY.length < 2 * n || !"bloom".equals(settings.s("popup", "style"))) return false;
-        Fx.popupArc(k.cx(), k.cy(), n, dp(settings.f("popup", "radius")), bounds.left + dp(22),
-                bounds.right - dp(22), bounds.top + dp(26), outXY);
-        return true;
+        if (!enabled || k == null || n <= 0 || outXY.length < 2 * n) return false;
+        return Fx.popupLayout(settings.s("popup", "style"), k.cx(), k.cy(), k.top, n, dp(settings.f("popup", "radius")),
+                bounds.left, bounds.top, bounds.right, bounds.bottom, dp(1), outXY);
     }
 
     /**
@@ -375,6 +375,10 @@ public final class KeyFx extends Drawable {
     /** The shared stroke paint, reset to a plain color and width in px. */
     public Paint stroke(int color, float width) {
         reset(stroke);
+        // An effect may have changed these on the shared paint; every stroke starts round and solid
+        stroke.setStrokeCap(Paint.Cap.ROUND);
+        stroke.setStrokeJoin(Paint.Join.ROUND);
+        stroke.setPathEffect(null);
         stroke.setColor(color);
         stroke.setStrokeWidth(width);
         return stroke;
@@ -666,13 +670,29 @@ public final class KeyFx extends Drawable {
         }
     }
 
+    /** The cursor moved dx characters or dy lines while the spacebar is a trackpad. */
+    public void cursorStep(int dx, int dy) {
+        if (!enabled) return;
+        for (FxModule m : modules) {
+            try {
+                m.onCursorStep(dx, dy);
+            } catch (Throwable e) {
+                fail(m, e);
+            }
+        }
+    }
+
     /**
      * False when the show animation moves the real keys itself through look() (hosts with
-     * CAP_KEY_TRANSFORM and "Animate each key" on): call show(null, onDone) and keep the view
+     * CAP_KEY_TRANSFORM and "Animate each key" on, or a style that only works on real keys: piano,
+     * decode and flap, whatever that toggle says): call show(null, onDone) and keep the view
      * visible; onDone still runs when the keys settle.
      */
     public boolean showNeedsSnapshot() {
-        return (caps & CAP_KEY_TRANSFORM) == 0 || !settings.b("show", "perKey");
+        if ((caps & CAP_KEY_TRANSFORM) == 0) return true;
+        final String mode = settings.s("show", "mode");
+        if ("piano".equals(mode) || "decode".equals(mode) || "flap".equals(mode)) return false;
+        return !settings.b("show", "perKey");
     }
 
     /**

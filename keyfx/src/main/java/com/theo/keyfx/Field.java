@@ -30,6 +30,8 @@ public final class Field {
     boolean showNegate;
     // Host capabilities this field needs (KeyFx.CAP_*); hidden in hosts that lack them
     int requires;
+    // Host capabilities each choice value needs (KeyFx.CAP_*), parallel to values; null when none do
+    int[] valueRequires;
 
     private Field(int type, String key, String label, float min, float max, float step, String unit,
                   float defFloat, boolean defBool, String[] values, String[] names, String defString) {
@@ -100,6 +102,30 @@ public final class Field {
     /** The capabilities this field needs that the host lacks, or 0. */
     public int missing(int hostCaps) {
         return requires & ~hostCaps;
+    }
+
+    /** Offer this choice value only to hosts with these capabilities. */
+    public Field valueRequires(String value, int caps) {
+        if (values == null) return this;
+        if (valueRequires == null) valueRequires = new int[values.length];
+        for (int i = 0; i < values.length; i++) if (values[i].equals(value)) valueRequires[i] = caps;
+        return this;
+    }
+
+    /** The capabilities choice value i needs that the host lacks, or 0. */
+    public int valueMissing(int i, int hostCaps) {
+        return valueRequires == null ? 0 : valueRequires[i] & ~hostCaps;
+    }
+
+    /** Whether value is one of this choice's values and the host can show it. */
+    public boolean valueSupportedBy(String value, int hostCaps) {
+        if (values == null) return true;
+        // A color field also takes custom "#RRGGBB" values (lab imports store them)
+        if (value.startsWith("#")) {
+            for (String v : values) if (v.startsWith("#")) return true;
+        }
+        for (int i = 0; i < values.length; i++) if (values[i].equals(value)) return valueMissing(i, hostCaps) == 0;
+        return false;
     }
 
     /** The key of the field that decides whether this one shows, or null. */
