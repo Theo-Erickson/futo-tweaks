@@ -10,6 +10,7 @@ import android.graphics.PixelFormat;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
+import android.text.InputType;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -121,7 +122,10 @@ public final class KeyFx extends Drawable {
 
     private FxLayout layout = FxLayout.EMPTY;
     private int systemAccent = 0xFF8AB4F8;
+    // On while animations are allowed and the field isn't private; see setEnabled(), setPrivateField()
     private boolean enabled = true;
+    private boolean animationsOn = true;
+    private boolean privateField;
     private FxHost host;
     private boolean keysWereMoving;
     private WordLook word;
@@ -178,12 +182,46 @@ public final class KeyFx extends Drawable {
 
     /** Turns everything off without losing settings, for example when animations are disabled. */
     public void setEnabled(boolean on) {
-        enabled = on;
-        if (!on) reset();
+        animationsOn = on;
+        applyEnabled();
     }
 
+    /**
+     * Whether the field being typed in is private, like a password (see isPrivateInput()).
+     * keyfx draws nothing there, so no effect hints at what is typed, and isEnabled() turns
+     * false so hosts that check it also stop reading the field's text.
+     */
+    public void setPrivateField(boolean isPrivate) {
+        privateField = isPrivate;
+        applyEnabled();
+    }
+
+    /** False while animations are off or the field is private: send no events and read no text. */
     public boolean isEnabled() {
         return enabled;
+    }
+
+    private void applyEnabled() {
+        enabled = animationsOn && !privateField;
+        if (!enabled) reset();
+    }
+
+    /**
+     * Whether an EditorInfo.inputType is a password field, shown or hidden, text or number.
+     * Hosts pass the result to setPrivateField() when input starts.
+     */
+    public static boolean isPrivateInput(int inputType) {
+        final int variation = inputType & InputType.TYPE_MASK_VARIATION;
+        switch (inputType & InputType.TYPE_MASK_CLASS) {
+            case InputType.TYPE_CLASS_TEXT:
+                return variation == InputType.TYPE_TEXT_VARIATION_PASSWORD
+                        || variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                        || variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD;
+            case InputType.TYPE_CLASS_NUMBER:
+                return variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD;
+            default:
+                return false;
+        }
     }
 
     public void setLayout(FxLayout l) {
