@@ -9,8 +9,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Roboto:wght@400;500&display=swap">
-</head>
-<body>
 <style>
 /* Layout: a single settings column (two on wide screens, cards equal height per section) above a phone-width mock keyboard
    docked to the bottom, summoned by a floating button pinned to the top-right corner. */
@@ -179,6 +177,9 @@ h1 {
 @media (min-width: 880px) {
   .cards { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
   #card-global { grid-column: 1 / -1; }
+  /* The ideas card spans both columns too, and those two keep their own heights */
+  .cards.top { grid-auto-rows: auto; }
+  .card.ideas { grid-column: 1 / -1; }
   #card-global .fields { grid-template-columns: 1fr 1fr; column-gap: 28px; align-items: start; }
 }
 
@@ -194,6 +195,8 @@ h1 {
 }
 .card .card-foot { margin-top: auto; }
 .card.off .fields { opacity: 0.45; }
+.ideas .idea-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.ideas .idea-group { font: 500 11px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); width: 100%; }
 .card-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
 .card-head h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; margin: 0; }
 .card-head p { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); }
@@ -457,29 +460,38 @@ const DEFAULTS = {
   global: { accent: '#8AB4F8', kbTheme: 'dark', speed: 1, intensity: 1 },
   pop: { on: true, grow: 6, pullback: 340, bounce: 0.35, scaleKey: true, keyScale: 1.12, strength: 1 },
   float: { on: true, mode: 'ghost', rise: 42, duration: 640, grow: 1.6, wave: 8, waves: 1.5, strength: 1 },
-  heat: { on: true, swipe: true, build: 0.09, cool: 1100, threshold: 0.12, thickness: 18, strength: 1 },
-  wave: { on: true, radius: 1.8, speed: 0.35, strength: 0.8 },
+  heat: { on: true, style: 'glow', swipe: true, build: 0.09, cool: 1100, threshold: 0.12, thickness: 18, combo: false, window: 700, showAt: 5, strength: 1 },
+  wave: { on: true, style: 'wave', radius: 1.8, speed: 0.35, strength: 0.8 },
   ripple: { on: false, radius: 36, duration: 380, strength: 1 },
   sparks: { on: false, count: 10, life: 520, gravity: 320, strength: 1 },
-  enter: { on: true, duration: 380, width: 30, strength: 1 },
+  drop: { on: false, rings: 3, duration: 650, strength: 1 },
+  enter: { on: true, style: 'sweep', duration: 380, width: 30, strength: 1 },
   space: { on: true, mode: 'stars', count: 9, spread: 1, life: 760, strength: 1 },
-  del: { on: true, tap: 'fire', letterFx: true, fireHeight: 1, fireCount: 22, fireLife: 620, slashSpeed: 70, slashOver: 0.25, slashTilt: 15, shards: 8, strength: 1 },
-  delHold: { on: true, button: 'blackhole', letters: 'swirl', flight: 1100, offset: 0, size: 34, swirl: 1, shake: true, strength: 1 },
+  del: { on: true, tap: 'fire', letterFx: true, fireHeight: 1, fireCount: 22, fireLife: 620, slashSpeed: 70, slashOver: 0.25, slashTilt: 15, shards: 8,
+    laserColor: 'red', laserSpeed: 120, laserWidth: 2.5, dustSize: 1.6, dustLife: 900, dustWind: 'right',
+    glitch: 4, strips: 6, strength: 1 },
+  delHold: { on: true, button: 'blackhole', letters: 'swirl', flight: 1100, offset: 0, size: 34, swirl: 1, shake: true, words: true, wordsAfter: 8, wordPace: 220, strength: 1 },
   futoTrail: { on: true },
   trace: { on: true, color: 'accent', custom: '#FF8A3D', duration: 620, strength: 1 },
   comet: { on: false, length: 260, width: 7, hue: 60, strength: 1 },
   ink: { on: false, color: 'accent', min: 1.5, max: 10, linger: 500, strength: 1 },
   dust: { on: false, density: 1, life: 760, strength: 1 },
-  pick: { mode: 'corners', angle: 55, dwell: 90 },
-  hop: { on: true, exit: 'burn', highlight: true, grow: 1.22, strength: 1 },
+  circuit: { on: false, angles: '45', grid: 12, smooth: 2, linger: 700, pulse: true, stubs: true, strength: 1 },
+  grow: { on: false, scale: 1.25, duration: 320, strength: 1 },
+  lightning: { on: false, color: 'electric', custom: '#FFD24A', jag: 7, branches: true, linger: 450, strength: 1 },
+  neon: { on: false, color: 'pink', length: 420, flicker: 0.35, strength: 1 },
+  arrows: { on: false, color: 'accent', spacing: 22, size: 6, length: 520, strength: 1 },
+  water: { on: false, color: 'water', spacing: 16, size: 18, life: 800, strength: 1 },
+  pick: { mode: 'dwell', angle: 55, dwell: 90 },
+  hop: { on: true, collect: 'arc', word: 'join', extra: 'fall', mark: true, highlight: true, grow: 1.22, strength: 1 },
   constellation: { on: false, star: 5, glow: 1, fold: 420, strength: 1 },
   burst: { on: true, count: 18, strength: 1 },
   ring: { on: true, style: 'liquid', timeout: 300, appear: 35, thickness: 3, wave: 3, strength: 1 },
   popup: { style: 'bloom', radius: 70 },
-  trackpad: { on: true, dim: 0.6, labels: 0.85, grid: 0.35, halo: 26, strength: 1 },
+  trackpad: { on: true, look: 'rails', dim: 0.6, labels: 0.85, grid: 0.5, halo: 26, steps: true, warp: false, chevrons: false, strength: 1 },
   // perKey only matters on the phone (snapshot vs real keys); the lab always animates key by key
   show: { mode: 'bloom', duration: 320, stagger: 40, overshoot: 1.2, perKey: true },
-  hide: { mode: 'dip', duration: 160 },
+  hide: { mode: 'dip', duration: 160, stagger: 18 },
 };
 
 const STORE = 'futoTweaksLab.v1';
@@ -494,6 +506,20 @@ try {
   }
 } catch (e) { /* storage blocked: start from defaults */ }
 if (cfg.del.tap === 'crumble') cfg.del.tap = 'shatter'; // renamed in v2
+// v7: Grow float, eraser, merge and magnet were folded into other options; combo moved into heat
+if (cfg.float.mode === 'grow') cfg.float.mode = 'rise';
+if (cfg.del.tap === 'eraser') cfg.del.tap = 'fire';
+if (cfg.hop.word === 'merge' || cfg.hop.word === 'magnet') cfg.hop.word = 'join';
+// Storm, magnet and the moving trackpad grid were cut in keyfx
+if (cfg.delHold.button === 'storm' || cfg.delHold.button === 'magnet') cfg.delHold.button = 'blackhole';
+if (cfg.trackpad.look === 'grid') cfg.trackpad.look = 'rails';
+// v4 split letter hop's single exit into word letters and extra letters
+if ('exit' in cfg.hop) {
+  const ex = cfg.hop.exit;
+  cfg.hop.word = ex === 'form' ? 'form' : 'rise';
+  cfg.hop.extra = ex === 'form' ? 'fall' : ex;
+  delete cfg.hop.exit;
+}
 function save() {
   try { localStorage.setItem(STORE, JSON.stringify({ cfg: userCfg(), notes })); } catch (e) { /* not persisted */ }
 }
@@ -535,33 +561,49 @@ const SECTIONS = [
       R('grow', 'Swell', 0, 16, 0.5, 'dp'), R('pullback', 'Pullback time', 80, 1000, 10, 'ms'), R('bounce', 'Bounce', 0, 1, 0.05, ''),
       T('scaleKey', 'Scale the real key'), R('keyScale', 'Key growth', 1, 1.4, 0.01, '×', (c) => c.scaleKey), STR] },
     { id: 'float', name: 'Letter float', desc: 'The typed letter lifts off its key. Ghost sends up a see-through copy of the key that sways as it rises.', demo: 'type', fields: [
-      C('mode', 'Style', [['rise', 'Rise'], ['grow', 'Grow'], ['ghost', 'Ghost key']]),
+      C('mode', 'Style', [['rise', 'Rise'], ['ghost', 'Ghost key']]),
       R('rise', 'Rise height', 0, 100, 1, 'dp'), R('duration', 'Duration', 200, 1500, 10, 'ms'),
       R('grow', 'Growth', 1, 3, 0.05, '×'),
       R('wave', 'Sway width', 0, 24, 0.5, 'dp', (c) => c.mode === 'ghost'),
       R('waves', 'Sways', 0.5, 4, 0.25, '', (c) => c.mode === 'ghost'), STR] },
-    { id: 'heat', name: 'Heat streak', desc: 'A glow on the keyboard\'s top edge that warms toward orange as you type faster.', demo: 'heat', fields: [
+    { id: 'heat', name: 'Heat streak', tag: 'v2', desc: 'The keyboard\'s top edge warms toward orange as you type faster. Pick how the build-up looks, and add a combo counter.', demo: 'heat', fields: [
+      C('style', 'Build-up looks like', [['glow', 'Glow'], ['wave', 'Wave'], ['bar', 'Progress bar'], ['circuit', 'Energizing circuit'], ['embers', 'Rising embers']]),
       T('swipe', 'Swipes build heat too'),
       R('build', 'Build-up per key', 0.02, 0.25, 0.005, ''), R('cool', 'Cool-down', 200, 4000, 50, 'ms'),
-      R('threshold', 'Shows from', 0, 0.6, 0.01, ''), R('thickness', 'Glow height', 4, 40, 1, 'dp'), STR] },
-    { id: 'wave', name: 'Neighbor wave', tag: 'new', desc: 'Each press sends a ripple of light across the keys around it.', demo: 'type', fields: [
+      R('threshold', 'Shows from', 0, 0.6, 0.01, ''), R('thickness', 'Glow height', 4, 40, 1, 'dp', (c) => c.style === 'glow'),
+      T('combo', 'Combo counter (swipes count every letter of the word)'),
+      R('window', 'Combo breaks after', 250, 1500, 10, 'ms', (c) => c.combo), R('showAt', 'Combo shows from', 2, 20, 1, '', (c) => c.combo), STR] },
+    { id: 'wave', name: 'Neighbor wave', tag: 'v2', desc: 'Each press reaches out to the keys around it.', demo: 'type', fields: [
+      C('style', 'Style', [['wave', 'Wave'], ['orbit', 'Orbit around the key'], ['firework', 'Firework'], ['firecracker', 'Firecracker']]),
       R('radius', 'Reach', 1, 4, 0.1, 'keys'), R('speed', 'Speed', 0.1, 1.2, 0.05, 'dp/ms'), STR] },
     { id: 'ripple', name: 'Ripple', tag: 'new', desc: 'A ring expands from where you touch.', demo: 'type', fields: [
       R('radius', 'Size', 12, 80, 1, 'dp'), R('duration', 'Duration', 150, 1000, 10, 'ms'), STR] },
     { id: 'sparks', name: 'Sparks', tag: 'new', desc: 'A small burst of sparks flies off each press and falls.', demo: 'type', fields: [
       R('count', 'Amount', 3, 30, 1, ''), R('life', 'Lifetime', 200, 1200, 10, 'ms'),
       R('gravity', 'Gravity', 0, 800, 10, 'dp/s²'), STR] },
+    { id: 'drop', name: 'Water drop', tag: 'idea', desc: 'Rings ripple outward across the key from where your finger lands.', demo: 'type', fields: [
+      R('rings', 'Rings', 1, 5, 1, ''), R('duration', 'Duration', 250, 1400, 10, 'ms'), STR] },
   ] },
   { title: 'Special keys', blurb: 'Enter, space and backspace get their own effects.', items: [
-    { id: 'enter', name: 'Enter sweep', desc: 'A band of light sweeps across the enter key\'s row.', demo: 'enter', fields: [
-      R('duration', 'Sweep time', 150, 900, 10, 'ms'), R('width', 'Band width', 10, 60, 1, '%'), STR] },
+    { id: 'enter', name: 'Enter', tag: 'v2', desc: 'What enter does when it sends or starts a new line.', demo: 'enter', fields: [
+      C('style', 'Style', [['sweep', 'Sweep its row'], ['shockwave', 'Shockwave'], ['rocket', 'Rocket'], ['rows', 'Row wave'], ['check', 'Check mark']]),
+      R('duration', 'Duration', 150, 1200, 10, 'ms'), R('width', 'Band width', 10, 60, 1, '%', (c) => c.style === 'sweep'), STR] },
     { id: 'space', name: 'Spacebar', tag: 'new', desc: 'Stars launch off the spacebar, or it puffs out a little cloud.', demo: 'space', fields: [
       C('mode', 'Style', [['stars', 'Stars'], ['puff', 'Puff'], ['shimmer', 'Shimmer']]),
       R('count', 'Amount', 3, 24, 1, '', (c) => c.mode !== 'shimmer'), R('spread', 'Spread', 0.3, 2, 0.05, '×'),
       R('life', 'Lifetime', 300, 1600, 10, 'ms'), STR] },
     { id: 'del', name: 'Backspace tap', tag: 'v2', desc: 'What one press does to the key, and to the letter it deletes.', demo: 'delTap', fields: [
-      C('tap', 'Effect', [['fire', 'Fire'], ['slash', 'Slash'], ['shatter', 'Shatter'], ['none', 'None']]),
-      T('letterFx', 'The deleted letter burns, splits or shatters too', (c) => c.tap !== 'none'),
+      C('tap', 'Effect', [['fire', 'Fire'], ['slash', 'Slash'], ['shatter', 'Shatter'], ['laser', 'Laser'], ['dust', 'Disintegrate'],
+        ['rewind', 'Rewind'], ['glitch', 'Glitch'], ['shred', 'Shredder'], ['swirl', 'Swirl in'], ['vacuum', 'Vacuum on curves'], ['none', 'None']]),
+      R('glitch', 'Glitch amount', 1, 10, 0.5, 'dp', (c) => c.tap === 'glitch'),
+      R('strips', 'Strips', 3, 12, 1, '', (c) => c.tap === 'shred'),
+      T('letterFx', 'The deleted letters react too', (c) => c.tap !== 'none'),
+      C('laserColor', 'Beam color', [['red', 'Red'], ['green', 'Green'], ['accent', 'Accent']], (c) => c.tap === 'laser'),
+      R('laserSpeed', 'Beam travel time', 40, 400, 5, 'ms', (c) => c.tap === 'laser'),
+      R('laserWidth', 'Beam width', 1, 6, 0.25, 'dp', (c) => c.tap === 'laser'),
+      R('dustSize', 'Grain size', 0.6, 3, 0.1, 'dp', (c) => c.tap === 'dust'),
+      R('dustLife', 'Crumble time', 300, 1800, 10, 'ms', (c) => c.tap === 'dust'),
+      C('dustWind', 'Dust drifts', [['right', 'With the wind'], ['up', 'Upward'], ['scatter', 'Scatter']], (c) => c.tap === 'dust'),
       R('fireHeight', 'Flame height', 0.4, 2.5, 0.05, '×', (c) => c.tap === 'fire'),
       R('fireCount', 'Flames', 6, 50, 1, '', (c) => c.tap === 'fire'),
       R('fireLife', 'Burn time', 250, 1400, 10, 'ms', (c) => c.tap === 'fire'),
@@ -570,13 +612,17 @@ const SECTIONS = [
       R('slashTilt', 'Random tilt', 0, 45, 1, '°', (c) => c.tap === 'slash'),
       R('shards', 'Shards', 4, 16, 1, '', (c) => c.tap === 'shatter'), STR] },
     { id: 'delHold', name: 'Backspace hold', tag: 'v2', desc: 'Two layers: what the key turns into while held, and how each deleted letter gets to it.', demo: 'delHold', fields: [
-      C('button', 'Key while held', [['blackhole', 'Black hole'], ['lava', 'Lava rumble'], ['box', 'Opens like a box'], ['void', 'Fades into a hole'], ['none', 'None']]),
-      C('letters', 'Deleted letters', [['swirl', 'Swirl in'], ['vacuum', 'Vacuum on curves'], ['press', 'One press each']]),
+      C('button', 'Key while held', [['blackhole', 'Black hole'], ['lava', 'Lava rumble'], ['box', 'Opens like a box'], ['void', 'Fades into a hole'],
+        ['portal', 'Portal'], ['none', 'None']]),
+      C('letters', 'Deleted letters', [['swirl', 'Swirl in'], ['vacuum', 'Vacuum on curves'], ['beam', 'Tractor beam'], ['press', 'One press each']]),
       R('flight', 'Letter travel time', 300, 2400, 10, 'ms', (c) => c.letters !== 'press'),
       R('offset', 'Black hole position, key to center', 0, 1, 0.01, '', (c) => c.button === 'blackhole'),
       R('size', 'Black hole size', 16, 60, 1, 'dp', (c) => c.button === 'blackhole'),
       R('swirl', 'Swirl speed', 0.2, 3, 0.05, '×', (c) => c.letters === 'swirl'),
-      T('shake', 'Shake the key', (c) => c.button === 'lava'), STR] },
+      T('shake', 'Shake the key', (c) => c.button === 'lava'),
+      T('words', 'After a few letters, delete whole words (like the module)'),
+      R('wordsAfter', 'Switch to words after', 1, 30, 1, 'letters', (c) => c.words),
+      R('wordPace', 'Time per word', 80, 600, 10, 'ms', (c) => c.words), STR] },
   ] },
   { title: 'Swipe trail', blurb: 'Drawn along your finger while swiping a word. Several can run at once.', items: [
     { id: 'futoTrail', name: 'FUTO\'s own trail', desc: 'The thin line FUTO already draws. Turn it off to judge the others alone.', demo: 'swipe', fields: [] },
@@ -588,6 +634,25 @@ const SECTIONS = [
     { id: 'ink', name: 'Ink brush', tag: 'new', desc: 'Thick when you slow down, thin when you move fast, like a calligraphy pen.', demo: 'swipe', fields: [
       C('color', 'Ink', [['accent', 'Accent'], ['ink', 'Ink']]), R('min', 'Thinnest', 0.5, 6, 0.25, 'dp'),
       R('max', 'Thickest', 3, 20, 0.5, 'dp'), R('linger', 'Linger', 100, 1500, 10, 'ms'), STR] },
+    { id: 'circuit', name: 'Circuit trail', tag: 'new', desc: 'The trail snaps to a grid like traces on a circuit board, with vias at the corners and pulses of light running along it.', demo: 'swipe', fields: [
+      C('angles', 'Traces', [['45', 'Straight and 45°'], ['90', 'Right angles only']]), R('grid', 'Grid size', 6, 24, 1, 'dp'),
+      R('smooth', 'Smoothing (fewer corners)', 1, 6, 1, 'steps'),
+      R('linger', 'Linger', 150, 2000, 10, 'ms'), T('pulse', 'Pulses of light'), T('stubs', 'Side branches'), STR] },
+    { id: 'lightning', name: 'Lightning', tag: 'idea', desc: 'Jagged arcs jump between the letters you pick, with a live bolt to your finger.', demo: 'swipe', fields: [
+      C('color', 'Color', [['electric', 'Electric blue'], ['white', 'White'], ['green', 'Green'], ['violet', 'Violet'], ['accent', 'Accent'], ['custom', 'Custom']]),
+      K('custom', 'Custom color', (c) => c.color === 'custom'), R('jag', 'Jaggedness', 2, 16, 0.5, 'dp'),
+      T('branches', 'Side forks'), R('linger', 'Linger', 150, 1500, 10, 'ms'), STR] },
+    { id: 'neon', name: 'Neon tube', tag: 'idea', desc: 'A double-line glow like a bent neon sign, with a little flicker.', demo: 'swipe', fields: [
+      C('color', 'Color', [['pink', 'Pink'], ['cyan', 'Cyan'], ['lime', 'Lime'], ['rainbow', 'Rainbow'], ['accent', 'Accent']]), R('length', 'Tube length', 120, 1200, 10, 'ms'),
+      R('flicker', 'Flicker', 0, 1, 0.05, ''), STR] },
+    { id: 'arrows', name: 'Arrow trail', tag: 'new', desc: 'Chevrons along the path, pointing the way your finger went.', demo: 'swipe', fields: [
+      C('color', 'Color', [['accent', 'Accent'], ['white', 'White']]), R('spacing', 'Spacing', 12, 40, 1, 'dp'), R('size', 'Size', 3, 12, 0.5, 'dp'),
+      R('length', 'Length', 150, 1400, 10, 'ms'), STR] },
+    { id: 'water', name: 'Water wake', tag: 'new', desc: 'Like dragging a finger through a puddle: ripples spread from the path and a wet streak fades.', demo: 'swipe', fields: [
+      C('color', 'Color', [['water', 'Water'], ['accent', 'Accent']]), R('spacing', 'Ripple spacing', 8, 40, 1, 'dp'), R('size', 'Ripple size', 8, 40, 1, 'dp'),
+      R('life', 'Lifetime', 300, 1600, 10, 'ms'), STR] },
+    { id: 'grow', name: 'Key grow', tag: 'new', desc: 'Each key swells as the swipe passes over it, then settles back.', demo: 'swipe', fields: [
+      R('scale', 'Grow', 1.05, 1.6, 0.01, '×'), R('duration', 'Settle time', 120, 900, 10, 'ms'), STR] },
     { id: 'dust', name: 'Stardust', tag: 'new', desc: 'Sparkles shed from the trail and twinkle for a moment.', demo: 'swipe', fields: [
       R('density', 'Density', 0.2, 3, 0.05, '×'), R('life', 'Lifetime', 200, 1600, 10, 'ms'), STR] },
   ] },
@@ -596,8 +661,12 @@ const SECTIONS = [
       C('mode', 'Pick letters', [['corners', 'Where you turn'], ['dwell', 'Where you pause'], ['all', 'Every key crossed']]),
       R('angle', 'Turn needed', 30, 120, 1, '°', (c) => c.mode === 'corners'),
       R('dwell', 'Pause needed', 20, 300, 5, 'ms', (c) => c.mode === 'dwell')] },
-    { id: 'hop', name: 'Letter hop', tag: 'v2', desc: 'Crossed letters collect on the number row instead of covering the suggestions. The predicted word lights up letter by letter, and on commit the letters burn up or fly into backspace.', demo: 'swipe', fields: [
-      C('exit', 'On commit', [['burn', 'Burn up'], ['fly', 'Fly to backspace'], ['form', 'Form the word']]),
+    { id: 'hop', name: 'Letter hop', tag: 'v3', desc: 'Picked letters gather on the number row. When the word lands, the letters that are in it and the extra ones that are not each get their own exit.', demo: 'swipe', fields: [
+      C('collect', 'Gathering', [['arc', 'Hop'], ['bounce', 'Drop and bounce'], ['zip', 'Zip'], ['spin', 'Spin']]),
+      C('word', 'Letters in the word', [['join', 'Join the suggestion'], ['rise', 'Rise away'], ['text', 'Fly into the text'], ['form', 'Form the word'],
+        ['glow', 'Glow and fade'], ['type', 'Typewriter']]),
+      C('extra', 'Extra letters', [['fall', 'Fall'], ['burn', 'Burn up'], ['dust', 'Crumble to dust'], ['fly', 'Fly to backspace'], ['shake', 'Shake off'], ['fade', 'Shrink away']]),
+      T('mark', 'Grey out the extra letters first'),
       T('highlight', 'Light up the predicted word'), R('grow', 'Predicted letter growth', 1, 1.6, 0.01, '×', (c) => c.highlight), STR] },
     { id: 'constellation', name: 'Constellation', tag: 'new', desc: 'The picked letters become stars joined by lines, then fold into the suggestion bar.', demo: 'swipe', fields: [
       R('star', 'Star size', 2, 10, 0.5, 'dp'), R('glow', 'Line glow', 0, 2, 0.05, '×'), R('fold', 'Fold time', 150, 1000, 10, 'ms'), STR] },
@@ -606,23 +675,27 @@ const SECTIONS = [
   ] },
   { title: 'Long press and spacebar', blurb: 'Hold e, a, o, u, n, c, s, y or the period for accents. Drag the spacebar to move the cursor.', items: [
     { id: 'ring', name: 'Hold charge', desc: 'Fills while you hold a key that has a long-press action.', demo: 'ring', fields: [
-      C('style', 'Style', [['liquid', 'Liquid fill'], ['ring', 'Ring']]),
+      C('style', 'Style', [['liquid', 'Liquid fill'], ['ring', 'Ring'], ['orbit', 'Orbiting sparks'], ['fuse', 'Burning fuse'], ['clock', 'Clock wipe']]),
       R('timeout', 'Long-press delay', 150, 800, 10, 'ms'), R('appear', 'Appears after', 0, 80, 1, '%'),
       R('thickness', 'Ring thickness', 1, 8, 0.5, 'dp', (c) => c.style === 'ring'),
       R('wave', 'Liquid wave', 0, 8, 0.25, 'dp', (c) => c.style === 'liquid'), STR] },
-    { id: 'popup', name: 'Accent popup', tag: 'new', noToggle: true, desc: 'Bloom fans the accents out in an arc around the key instead of a row.', demo: 'ring', fields: [
-      C('style', 'Layout', [['bloom', 'Bloom arc'], ['row', 'Row']]), R('radius', 'Bloom radius', 40, 120, 1, 'dp', (c) => c.style === 'bloom')] },
-    { id: 'trackpad', name: 'Spacebar trackpad', tag: 'stronger', desc: 'While the spacebar moves the cursor, the keys fade back and a grid follows your finger.', demo: 'trackpad', fields: [
-      R('dim', 'Dim keys', 0, 0.9, 0.01, ''), R('labels', 'Fade labels', 0, 1, 0.01, ''), R('grid', 'Grid', 0, 1, 0.01, ''),
-      R('halo', 'Finger halo', 0, 60, 1, 'dp'), STR] },
+    { id: 'popup', name: 'Accent popup', tag: 'v2', noToggle: true, desc: 'How the accents lay out around a held key.', demo: 'ring', fields: [
+      C('style', 'Layout', [['bloom', 'Bloom arc'], ['wheel', 'Wheel'], ['column', 'Column'], ['grid', 'Grid'], ['row', 'Row']]),
+      R('radius', 'Radius', 40, 120, 1, 'dp', (c) => c.style === 'bloom' || c.style === 'wheel')] },
+    { id: 'trackpad', name: 'Spacebar trackpad', tag: 'stronger', desc: 'While the spacebar moves the cursor, the keys fade back behind a pattern that shows the cursor moving. Line rails step with each line and letter the cursor moves.', demo: 'trackpad', fields: [
+      C('look', 'Look', [['rails', 'Line rails'], ['dots', 'Dot field'], ['fixed', 'Still grid'], ['ripple', 'Sonar'], ['glass', 'Spotlight']]),
+      R('dim', 'Dim keys', 0, 0.9, 0.01, ''), R('labels', 'Fade labels', 0, 1, 0.01, ''), R('grid', 'Pattern', 0, 1, 0.01, '', (c) => c.look !== 'glass'),
+      R('halo', 'Finger halo', 0, 60, 1, 'dp'), T('steps', 'Pulse on each cursor step'), T('warp', 'Warp streaks in the direction you move'),
+      T('chevrons', 'Arrows pointing where the cursor goes'), STR] },
   ] },
   { title: 'Keyboard show and hide', blurb: 'Plays when the keyboard appears and goes away.', items: [
     { id: 'show', name: 'Show animation', tag: 'new', noToggle: true, desc: 'Center bloom pops the keys in from the middle outward. Row cascade raises the rows from the bottom.', demo: 'show', fields: [
-      C('mode', 'Style', [['bloom', 'Center bloom'], ['cascade', 'Row cascade'], ['none', 'None']]),
+      C('mode', 'Style', [['bloom', 'Center bloom'], ['cascade', 'Row cascade'], ['piano', 'Piano'], ['decode', 'Decode'], ['flap', 'Split flap'], ['none', 'None']]),
       R('duration', 'Duration', 120, 900, 10, 'ms'), R('stagger', 'Stagger', 0, 120, 1, 'ms'), R('overshoot', 'Overshoot', 0, 3, 0.05, '×'),
       T('perKey', 'Animate each key', (c) => c.mode !== 'none')] },
     { id: 'hide', name: 'Hide animation', noToggle: true, desc: 'Android runs the real hide, so this can only be a quick moment before the slide.', demo: 'show', fields: [
-      C('mode', 'Style', [['dip', 'Dip'], ['none', 'None']]), R('duration', 'Duration', 80, 500, 10, 'ms')] },
+      C('mode', 'Style', [['dip', 'Dip'], ['fold', 'Fold down'], ['sink', 'Sink'], ['scatter', 'Scatter'], ['shrink', 'Shrink to center'], ['none', 'None']]),
+      R('duration', 'Duration', 80, 600, 10, 'ms', (c) => c.mode !== 'none'), R('stagger', 'Stagger', 0, 60, 1, 'ms', (c) => c.mode !== 'none' && c.mode !== 'sink')] },
   ] },
 ];
 
@@ -792,12 +865,94 @@ function buildCard(item) {
   return card;
 }
 
+/* The suggested ideas, each one button: switch it on, then play the preview that shows it */
+const IDEAS = [
+  ['Heat streak', [
+    ['Wave', () => { cfg.heat.on = true; cfg.heat.style = 'wave'; }, 'heat'],
+    ['Progress bar', () => { cfg.heat.on = true; cfg.heat.style = 'bar'; }, 'heat'],
+    ['Circuit', () => { cfg.heat.on = true; cfg.heat.style = 'circuit'; }, 'heat'],
+    ['Embers', () => { cfg.heat.on = true; cfg.heat.style = 'embers'; }, 'heat'],
+    ['Combo', () => { cfg.heat.on = true; cfg.heat.combo = true; }, 'heat'],
+  ]],
+  ['Neighbor wave', [
+    ['Orbit', () => { cfg.wave.on = true; cfg.wave.style = 'orbit'; }, 'type'],
+    ['Firework', () => { cfg.wave.on = true; cfg.wave.style = 'firework'; }, 'type'],
+    ['Firecracker', () => { cfg.wave.on = true; cfg.wave.style = 'firecracker'; }, 'type'],
+  ]],
+  ['Enter', [
+    ['Shockwave', () => { cfg.enter.on = true; cfg.enter.style = 'shockwave'; }, 'enter'],
+    ['Rocket', () => { cfg.enter.on = true; cfg.enter.style = 'rocket'; }, 'enter'],
+    ['Row wave', () => { cfg.enter.on = true; cfg.enter.style = 'rows'; }, 'enter'],
+    ['Check mark', () => { cfg.enter.on = true; cfg.enter.style = 'check'; }, 'enter'],
+  ]],
+  ['Backspace', [
+    ['Tap: swirl in', () => { cfg.del.on = true; cfg.del.tap = 'swirl'; }, 'delTap'],
+    ['Tap: vacuum', () => { cfg.del.on = true; cfg.del.tap = 'vacuum'; }, 'delTap'],
+    ['Hold: portal', () => { cfg.delHold.on = true; cfg.delHold.button = 'portal'; }, 'delHold'],
+    ['Hold: tractor beam', () => { cfg.delHold.on = true; cfg.delHold.letters = 'beam'; }, 'delHold'],
+  ]],
+  ['Swipe', [
+    ['Arrow trail', () => { cfg.arrows.on = true; }, 'swipe'],
+    ['Water wake', () => { cfg.water.on = true; }, 'swipe'],
+    ['Rainbow neon', () => { cfg.neon.on = true; cfg.neon.color = 'rainbow'; }, 'swipe'],
+    ['White lightning', () => { cfg.lightning.on = true; cfg.lightning.color = 'white'; }, 'swipe'],
+    ['Join the suggestion', () => { cfg.hop.on = true; cfg.hop.word = 'join'; }, 'swipe'],
+  ]],
+  ['Long press', [
+    ['Orbiting sparks', () => { cfg.ring.on = true; cfg.ring.style = 'orbit'; }, 'ring'],
+    ['Burning fuse', () => { cfg.ring.on = true; cfg.ring.style = 'fuse'; }, 'ring'],
+    ['Clock wipe', () => { cfg.ring.on = true; cfg.ring.style = 'clock'; }, 'ring'],
+    ['Popup: wheel', () => { cfg.popup.style = 'wheel'; }, 'ring'],
+    ['Popup: column', () => { cfg.popup.style = 'column'; }, 'ring'],
+    ['Popup: grid', () => { cfg.popup.style = 'grid'; }, 'ring'],
+  ]],
+  ['Show and hide', [
+    ['Split flap', () => { cfg.show.mode = 'flap'; }, 'show'],
+    ['Hide: fold', () => { cfg.hide.mode = 'fold'; }, 'show'],
+    ['Hide: sink', () => { cfg.hide.mode = 'sink'; }, 'show'],
+    ['Hide: scatter', () => { cfg.hide.mode = 'scatter'; }, 'show'],
+    ['Hide: shrink', () => { cfg.hide.mode = 'shrink'; }, 'show'],
+  ]],
+];
+function buildIdeasCard() {
+  const card = document.createElement('article');
+  card.className = 'card ideas';
+  card.innerHTML = `<div class="card-head"><div><h3>Try what's new<span class="tag">new</span></h3>
+    <p>Each button switches that effect on and plays it. They stay on afterwards, so turn off the ones you don't want in their own cards below.</p></div></div>`;
+  for (const [group, items] of IDEAS) {
+    const row = document.createElement('div');
+    row.className = 'idea-row';
+    row.innerHTML = `<span class="idea-group">${group}</span>`;
+    for (const [name, setup, demoKind] of items) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn small';
+      b.textContent = name;
+      b.addEventListener('click', () => {
+        // End any running preview first, so its isolation can't undo this switch
+        demo.cancel();
+        setup();
+        save();
+        // Rebuild the cards so their switches and choices show the change, keeping the scroll spot
+        const y = scrollY;
+        buildSettings();
+        scrollTo(0, y);
+        runDemo(demoKind);
+      });
+      row.appendChild(b);
+    }
+    card.appendChild(row);
+  }
+  return card;
+}
+
 function buildSettings() {
   settingsEl.innerHTML = '';
   fieldRefs.global = [];
   const g = document.createElement('section');
   g.className = 'section';
-  g.innerHTML = '<div class="cards"></div>';
+  g.innerHTML = '<div class="cards top"></div>';
+  g.firstChild.appendChild(buildIdeasCard());
   g.firstChild.appendChild(buildGlobalCard());
   settingsEl.appendChild(g);
   for (const sec of SECTIONS) {
@@ -1151,8 +1306,6 @@ function fxFloat(k, glyph) {
     const ep = easeOut(p);
     if (mode === 'rise') {
       glowText(glyph, k.cx, k.cy - c.rise * ep, size, 1 + (c.grow - 1) * 0.4 * ep, (1 - p) * s);
-    } else if (mode === 'grow') {
-      glowText(glyph, k.cx, k.cy - c.rise * 0.35 * ep, size, 1 + (c.grow - 1) * ep, Math.pow(1 - p, 1.2) * s);
     } else {
       // Ghost: a see-through copy of the key that sways as it drifts up
       const sway = Math.sin(p * Math.PI * 2 * c.waves) * c.wave * (1 - p * 0.4);
@@ -1186,17 +1339,102 @@ const heat = {
     if (vis > 0) {
       const L = this.level;
       const col = L < 0.5 ? mix(accent(), '#FF8A3D', L / 0.5) : mix('#FF8A3D', '#FF3B5C', (L - 0.5) / 0.5);
-      const g = ctx.createLinearGradient(0, KB.y, 0, KB.y + c.thickness);
-      g.addColorStop(0, rgba(col, 0.6 * vis));
-      g.addColorStop(1, rgba(col, 0));
-      ctx.fillStyle = g;
-      ctx.fillRect(0, KB.y, DW, c.thickness);
-      ctx.fillStyle = rgba(col, 0.95 * vis);
-      ctx.fillRect(0, KB.y, DW, 2);
+      drawHeat(c.style, L, col, vis, t, this);
     }
     return true;
   },
 };
+/** The heat streak's look along the keyboard's top edge. L is the heat level, vis its visibility. */
+function drawHeat(style, L, col, vis, t, h) {
+  const y = KB.y;
+  if (style === 'wave') {
+    // A wave that grows taller and faster as the heat builds
+    const amp = 2 + 9 * L, k = 0.045, ph = t / (260 - 150 * L);
+    ctx.beginPath();
+    for (let x = 0; x <= DW; x += 4) ctx.lineTo(x, y + 2 + amp * (0.5 + 0.5 * Math.sin(x * k - ph)));
+    ctx.lineTo(DW, y); ctx.lineTo(0, y); ctx.closePath();
+    ctx.fillStyle = rgba(col, 0.28 * vis);
+    ctx.fill();
+    ctx.beginPath();
+    for (let x = 0; x <= DW; x += 4) ctx.lineTo(x, y + 2 + amp * (0.5 + 0.5 * Math.sin(x * k - ph)));
+    ctx.strokeStyle = rgba(col, 0.95 * vis);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  } else if (style === 'bar') {
+    // A progress bar filling left to right, with a bright head
+    const w = DW * L;
+    ctx.fillStyle = rgba(col, 0.15 * vis);
+    ctx.fillRect(0, y, DW, 4);
+    const g = ctx.createLinearGradient(0, 0, Math.max(1, w), 0);
+    g.addColorStop(0, rgba(accent(), 0.9 * vis));
+    g.addColorStop(1, rgba(col, vis));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, w, 4);
+    const hg = ctx.createRadialGradient(w, y + 2, 0, w, y + 2, 12);
+    hg.addColorStop(0, `rgba(255,255,255,${0.9 * vis})`);
+    hg.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(w, y + 2, 12, 0, Math.PI * 2); ctx.fill();
+  } else if (style === 'circuit') {
+    // A trace along the top edge that powers up from both ends toward the middle
+    const seg = 26, half = DW / 2, lit = half * L;
+    const pathY = (x) => y + 3 + ((Math.floor(x / seg) % 3) === 1 ? 6 : 0);
+    ctx.lineWidth = 1.5;
+    for (let side of [-1, 1]) {
+      ctx.beginPath();
+      for (let d = 0; d <= half; d += 2) {
+        const x = side < 0 ? d : DW - d;
+        ctx.lineTo(x, pathY(x));
+      }
+      ctx.strokeStyle = rgba(col, 0.18 * vis);
+      ctx.stroke();
+      ctx.beginPath();
+      for (let d = 0; d <= lit; d += 2) {
+        const x = side < 0 ? d : DW - d;
+        ctx.lineTo(x, pathY(x));
+      }
+      ctx.shadowColor = rgba(col, vis);
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = rgba(col, 0.95 * vis);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      // Vias that light as the power reaches them, and a spark at the front
+      for (let d = seg; d < half; d += seg) {
+        const x = side < 0 ? d : DW - d, on = d <= lit;
+        ctx.beginPath(); ctx.arc(x, pathY(x - 1), 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = on ? rgba(col, vis) : rgba(col, 0.2 * vis);
+        ctx.fill();
+      }
+      const fx = side < 0 ? lit : DW - lit;
+      const sg = ctx.createRadialGradient(fx, pathY(fx), 0, fx, pathY(fx), 8);
+      sg.addColorStop(0, `rgba(255,255,255,${vis})`);
+      sg.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.arc(fx, pathY(fx), 8, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (style === 'embers') {
+    // Embers rise off the top edge, more and hotter as the heat builds
+    h.embers = h.embers || [];
+    if (Math.random() < 0.15 + 0.85 * L) for (let i = 0; i < 1 + Math.floor(L * 3); i++) h.embers.push({ x: rand(0, DW), t0: t, vy: rand(20, 50 + 60 * L), r: rand(1, 2.4), ph: rand(0, 6) });
+    h.embers = h.embers.filter((q) => t - q.t0 < 900);
+    for (const q of h.embers) {
+      const u = (t - q.t0) / 900, sec = (t - q.t0) / 1000;
+      ctx.fillStyle = fire(u * 0.8, (1 - u) * vis);
+      ctx.beginPath(); ctx.arc(q.x + Math.sin(q.ph + sec * 6) * 4, y - q.vy * sec, q.r * (1 - u * 0.5), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = rgba(col, 0.6 * vis);
+    ctx.fillRect(0, y, DW, 1.5);
+  } else {
+    const c = cfg.heat;
+    const g = ctx.createLinearGradient(0, y, 0, y + c.thickness);
+    g.addColorStop(0, rgba(col, 0.6 * vis));
+    g.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, DW, c.thickness);
+    ctx.fillStyle = rgba(col, 0.95 * vis);
+    ctx.fillRect(0, y, DW, 2);
+  }
+}
 function mix(a, b, t) {
   const A = hexToRgb(a), B = hexToRgb(b);
   return '#' + A.map((v, i) => Math.round(lerp(v, B[i], clamp01(t))).toString(16).padStart(2, '0')).join('');
@@ -1205,6 +1443,9 @@ function mix(a, b, t) {
 function fxWave(k) {
   const c = cfg.wave, t0 = now(), reach = c.radius * k.r.w, s = S('wave');
   const list = KEYS.filter((n) => n !== k && n.row > 0).map((n) => ({ n, d: Math.hypot(n.cx - k.cx, (n.cy - k.cy) * 0.9) })).filter((o) => o.d <= reach);
+  if (c.style === 'orbit') return waveOrbit(k, list, s);
+  if (c.style === 'firework') return waveFirework(k, list, s);
+  if (c.style === 'firecracker') return waveFirecracker(k, list, s);
   addFx((t) => {
     let alive = false;
     for (const { n, d } of list) {
@@ -1235,6 +1476,36 @@ function fxRipple(x, y) {
   });
 }
 
+/** Water drop: rings ripple out from the touch point, kept inside the key. */
+function fxDrop(k, x, y) {
+  const c = cfg.drop, t0 = now(), dur = D(c.duration), s = S('drop'), n = Math.round(c.rings);
+  const maxR = Math.hypot(k.r.w, k.r.h) * 0.75;
+  addFx((t) => {
+    const e = t - t0;
+    if (e >= dur) return false;
+    ctx.save();
+    roundRect(k.r.x, k.r.y, k.r.w, k.r.h, 9);
+    ctx.clip();
+    for (let i = 0; i < n; i++) {
+      const u = (e - i * dur * 0.18) / (dur * 0.7);
+      if (u <= 0 || u >= 1) continue;
+      ctx.strokeStyle = rgba(accent(), (1 - u) * 0.8 * s);
+      ctx.lineWidth = 2 * (1 - u) + 0.5;
+      ctx.beginPath(); ctx.arc(x, y, maxR * easeOut(u), 0, Math.PI * 2); ctx.stroke();
+    }
+    // A brief bright spot where the drop landed
+    if (e < dur * 0.25) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 10);
+      g.addColorStop(0, rgba('#FFFFFF', (1 - e / (dur * 0.25)) * 0.6 * s));
+      g.addColorStop(1, rgba('#FFFFFF', 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    return true;
+  });
+}
+
 function fxSparks(x, y) {
   const c = cfg.sparks, t0 = now(), life = D(c.life), s = S('sparks');
   const parts = Array.from({ length: Math.round(c.count) }, () => {
@@ -1256,6 +1527,139 @@ function fxSparks(x, y) {
   });
 }
 
+/** Combo meter: counts quick key presses; breaks after a pause. */
+const combo = {
+  n: 0, last: 0, bumpAt: 0, best: 0, running: false, endAt: 0,
+  hit(amount) {
+    const t = now(), c = cfg.heat, before = this.n;
+    if (t - this.last > D(c.window)) this.n = 0;
+    // A swiped word counts each of its letters
+    this.n += amount;
+    this.last = t;
+    this.bumpAt = t;
+    if (Math.floor(this.n / 10) > Math.floor(before / 10) && this.n >= c.showAt) fxComboFlash(this.n);
+    if (!this.running) { this.running = true; addFx((tt) => this.draw(tt)); }
+  },
+  draw(t) {
+    const c = cfg.heat, s = S('heat'), since = t - this.last, win = D(c.window);
+    if (!c.on || !c.combo) { this.running = false; return false; }
+    // After the window the combo breaks and fades out
+    const fade = since <= win ? 1 : 1 - clamp01((since - win) / D(400));
+    if (fade <= 0) { this.n = 0; this.running = false; return false; }
+    if (this.n < c.showAt) return true;
+    const bump = 1 + 0.35 * (1 - easeOut(clamp01((t - this.bumpAt) / D(180))));
+    const heatC = mix(accent(), '#FF8A3D', clamp01(this.n / 40));
+    const x = KB.x + KB.w - 46, y = KB.y - 16;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(bump, bump);
+    ctx.font = '700 20px Sora, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = rgba(heatC, 0.9 * fade * s);
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = rgba(heatC, fade * s);
+    ctx.fillText('×' + this.n, 0, 0);
+    ctx.restore();
+    // The time left in the combo, as a shrinking bar under the number
+    const left = 1 - clamp01(since / win);
+    ctx.fillStyle = rgba(heatC, 0.6 * fade * s);
+    ctx.fillRect(x - 22, y + 13, 44 * left, 2.5);
+    return true;
+  },
+};
+function fxComboFlash(n) {
+  const x = KB.x + KB.w - 46, y = KB.y - 16;
+  ringPop(x, y, 36, S('heat'));
+  emberBurst(x, y, S('heat'));
+}
+
+/** Orbit: a light circles the pressed key once, lighting each neighbor as it passes. */
+function waveOrbit(k, list, s) {
+  const t0 = now(), dur = D(520), rad = Math.max(k.r.w, k.r.h) * 0.95;
+  for (const o of list) o.a = Math.atan2(o.n.cy - k.cy, o.n.cx - k.cx);
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1.4) return false;
+    const a = -Math.PI / 2 + Math.PI * 2 * easeOut(Math.min(1, u));
+    for (const o of list) {
+      // Light a key for a moment once the orbit has swept past its angle
+      let passed = (((a - o.a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const swept = Math.PI * 2 * easeOut(Math.min(1, u));
+      const since = swept >= ((o.a + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2)) ? passed : -1;
+      if (since < 0 || since > 1.6) continue;
+      roundRect(o.n.r.x, o.n.r.y, o.n.r.w, o.n.r.h, 9);
+      ctx.fillStyle = rgba(accent(), 0.35 * (1 - since / 1.6) * s);
+      ctx.fill();
+    }
+    if (u < 1) {
+      const x = k.cx + Math.cos(a) * rad, y = k.cy + Math.sin(a) * rad * 0.8;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 9);
+      g.addColorStop(0, `rgba(255,255,255,${s})`);
+      g.addColorStop(1, rgba(accent(), 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill();
+    }
+    return true;
+  });
+}
+/** Firework: sparks shoot from the key to each neighbor and burst there. */
+function waveFirework(k, list, s) {
+  const t0 = now(), fly = D(200), speedK = 1 / Math.max(0.1, cfg.wave.speed);
+  const shots = list.map((o) => ({ ...o, delay: D(o.d * speedK * 0.4), hue: (hexHue(accent()) + rand(-40, 60) + 360) % 360, rays: Array.from({ length: 7 }, (_, i) => i * Math.PI * 2 / 7 + rand(-0.2, 0.2)) }));
+  addFx((t) => {
+    let alive = false;
+    for (const q of shots) {
+      const e = t - t0 - q.delay;
+      if (e < 0) { alive = true; continue; }
+      if (e < fly) {
+        alive = true;
+        const p = easeOut(e / fly);
+        ctx.fillStyle = `hsla(${q.hue},95%,72%,${s})`;
+        ctx.beginPath(); ctx.arc(lerp(k.cx, q.n.cx, p), lerp(k.cy, q.n.cy, p) - 10 * Math.sin(Math.PI * p), 2, 0, Math.PI * 2); ctx.fill();
+        continue;
+      }
+      const u = (e - fly) / D(420);
+      if (u >= 1) continue;
+      alive = true;
+      const r = 4 + 14 * easeOut(u);
+      ctx.strokeStyle = `hsla(${q.hue},95%,70%,${(1 - u) * s})`;
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      for (const a of q.rays) {
+        ctx.beginPath();
+        ctx.moveTo(q.n.cx + Math.cos(a) * r * 0.45, q.n.cy + Math.sin(a) * r * 0.45 + 12 * u * u);
+        ctx.lineTo(q.n.cx + Math.cos(a) * r, q.n.cy + Math.sin(a) * r + 12 * u * u);
+        ctx.stroke();
+      }
+    }
+    return alive;
+  });
+}
+/** Firecracker: the neighbors pop one after another in a random, rapid string. */
+function waveFirecracker(k, list, s) {
+  const t0 = now(), order = list.slice().sort(() => Math.random() - 0.5).map((o, i) => ({ ...o, at: D(i * 45 + rand(0, 20)) }));
+  addFx((t) => {
+    let alive = false;
+    for (const q of order) {
+      const u = (t - t0 - q.at) / D(220);
+      if (u < 0) { alive = true; continue; }
+      if (u >= 1) continue;
+      alive = true;
+      const j = (1 - u) * 1.5;
+      roundRect(q.n.r.x + rand(-j, j), q.n.r.y + rand(-j, j), q.n.r.w, q.n.r.h, 9);
+      ctx.fillStyle = `rgba(255,245,220,${0.45 * (1 - u) * s})`;
+      ctx.fill();
+      ctx.fillStyle = fire(u, (1 - u) * s);
+      for (let i = 0; i < 4; i++) {
+        const a = rand(0, Math.PI * 2), d = 6 + 12 * u;
+        ctx.fillRect(q.n.cx + Math.cos(a) * d, q.n.cy + Math.sin(a) * d, 1.6, 1.6);
+      }
+    }
+    return alive;
+  });
+}
+
 /* ---------- Special keys ---------- */
 function band(x, y, w, h, alpha) {
   const g = ctx.createLinearGradient(x, 0, x + w, 0);
@@ -1267,11 +1671,107 @@ function band(x, y, w, h, alpha) {
 }
 function fxEnter(k) {
   const c = cfg.enter, t0 = now(), dur = D(c.duration), bw = Math.max(50, DW * c.width / 100), s = S('enter');
+  if (c.style === 'shockwave') return enterShockwave(k, dur, s);
+  if (c.style === 'rocket') return enterRocket(k, dur, s);
+  if (c.style === 'rows') return enterRows(k, dur, s);
+  if (c.style === 'check') return enterCheck(k, dur, s);
   addFx((t) => {
     const p = (t - t0) / dur;
     if (p >= 1) return false;
     const cx = lerp(KB.x + KB.w + bw / 2, KB.x - bw / 2, easeOut(p));
     band(cx - bw / 2, k.r.y, bw, k.r.h, 0.5 * Math.sin(Math.PI * p) * s);
+    return true;
+  });
+}
+/** Shockwave: a ring blasts out from enter across the whole keyboard. */
+function enterShockwave(k, dur, s) {
+  const t0 = now(), maxR = Math.hypot(KB.w, KB.h);
+  k.el.animate([{ transform: 'scale(0.92)' }, { transform: 'none' }], { duration: D(180) });
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) return false;
+    const r = maxR * easeOut(u);
+    const g = ctx.createRadialGradient(k.cx, k.cy, Math.max(0, r - 26), k.cx, k.cy, r);
+    g.addColorStop(0, rgba(accent(), 0));
+    g.addColorStop(0.8, rgba(accent(), 0.35 * (1 - u) * s));
+    g.addColorStop(1, rgba(accent(), 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(k.cx, k.cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = rgba(accent(), 0.8 * (1 - u) * s);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(k.cx, k.cy, r, 0, Math.PI * 2); ctx.stroke();
+    return true;
+  });
+}
+/** Rocket: a little rocket launches off enter, arcing up and away with a smoke trail. */
+function enterRocket(k, dur, s) {
+  const t0 = now(), puffs = [], life = dur * 1.4;
+  addFx((t) => {
+    const u = (t - t0) / life;
+    if (u >= 1 && !puffs.some((q) => t - q.t0 < D(500))) return false;
+    const p = easeIn(Math.min(1, u)), x = k.cx - 40 * p * p, y = k.cy - (k.cy + 30) * p;
+    const ang = Math.atan2(-(k.cy + 30), -80 * p) + Math.PI / 2;
+    if (u < 1 && Math.random() < 0.8) puffs.push({ x, y: y + 8, t0: t, r: rand(2, 4) });
+    for (const q of puffs) {
+      const a = (t - q.t0) / D(500);
+      if (a >= 1) continue;
+      ctx.fillStyle = rgba(cfg.global.kbTheme === 'light' ? '#9AA0AA' : '#C9CED8', 0.35 * (1 - a) * s);
+      ctx.beginPath(); ctx.arc(q.x + rand(-0.5, 0.5), q.y + 10 * a, q.r * (1 + a * 1.5), 0, Math.PI * 2); ctx.fill();
+    }
+    if (u < 1) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+      ctx.fillStyle = fire(0.2, s);
+      ctx.beginPath(); ctx.moveTo(-3, 6); ctx.lineTo(0, 13 + rand(0, 4)); ctx.lineTo(3, 6); ctx.fill();
+      ctx.fillStyle = rgba(accent(), s);
+      ctx.beginPath(); ctx.moveTo(0, -9); ctx.quadraticCurveTo(5, -2, 4, 6); ctx.lineTo(-4, 6); ctx.quadraticCurveTo(-5, -2, 0, -9); ctx.fill();
+      ctx.restore();
+    }
+    return true;
+  });
+}
+/** Row wave: each row lights up in turn from the bottom, like the page feeding a new line. */
+function enterRows(k, dur, s) {
+  const t0 = now(), rows = ROW_EL.map((el, i) => KEYS.filter((q) => q.row === i)).filter((r) => r.length).reverse();
+  addFx((t) => {
+    let alive = false;
+    rows.forEach((row, i) => {
+      const u = (t - t0 - i * dur * 0.16) / (dur * 0.5);
+      if (u < 0) { alive = true; return; }
+      if (u >= 1) return;
+      alive = true;
+      const top = Math.min(...row.map((q) => q.r.y)), bot = Math.max(...row.map((q) => q.r.y + q.r.h));
+      ctx.fillStyle = rgba(accent(), 0.3 * Math.sin(Math.PI * u) * s);
+      ctx.fillRect(KB.x, top - 2, KB.w, bot - top + 4);
+    });
+    return alive;
+  });
+}
+/** Check mark: a check draws itself over enter, then pops. */
+function enterCheck(k, dur, s) {
+  const t0 = now(), draw = dur * 0.5;
+  const pts = [[-0.28, 0.02], [-0.06, 0.24], [0.3, -0.22]].map(([a, b]) => [k.cx + a * k.r.h * 1.6, k.cy + b * k.r.h * 1.6]);
+  const l1 = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]), l2 = Math.hypot(pts[2][0] - pts[1][0], pts[2][1] - pts[1][1]);
+  addFx((t) => {
+    const e = t - t0;
+    if (e >= dur) return false;
+    const p = easeOut(clamp01(e / draw)) * (l1 + l2), fade = 1 - clamp01((e - draw) / (dur - draw));
+    const pop = 1 + 0.25 * Math.sin(Math.PI * clamp01((e - draw) / (dur * 0.3)));
+    ctx.save();
+    ctx.translate(k.cx, k.cy); ctx.scale(pop, pop); ctx.translate(-k.cx, -k.cy);
+    ctx.strokeStyle = rgba(accent(), fade * s);
+    ctx.shadowColor = rgba(accent(), fade * s);
+    ctx.shadowBlur = 10;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    if (p <= l1) ctx.lineTo(lerp(pts[0][0], pts[1][0], p / l1), lerp(pts[0][1], pts[1][1], p / l1));
+    else { ctx.lineTo(pts[1][0], pts[1][1]); ctx.lineTo(lerp(pts[1][0], pts[2][0], (p - l1) / l2), lerp(pts[1][1], pts[2][1], (p - l1) / l2)); }
+    ctx.stroke();
+    ctx.restore();
     return true;
   });
 }
@@ -1357,19 +1857,321 @@ function plainText(str, x, y, color, rot = 0, scale = 1) {
   ctx.restore();
 }
 
-/** Backspace tap: an effect on the key, and optionally the same treatment for the deleted letter. */
-function fxDelTap(k, letter) {
-  const c = cfg.del, s = S('del'), withLetter = letter && c.letterFx;
-  if (c.tap === 'fire') {
-    fireOnKey(k, c, s);
-    if (withLetter) burnLetter(letter, c, s);
-  } else if (c.tap === 'slash') {
-    const ang = slashOnKey(k, c, s);
-    if (withLetter) cutLetter(letter, ang, c, s);
-  } else if (c.tap === 'shatter') {
-    shatterKey(k, c, s);
-    if (withLetter) shatterLetter(letter, s);
+/**
+ * Backspace tap: an effect on the key, and optionally the same treatment for every letter it
+ * deleted. A whole word (backspace right after a swiped word) goes letter by letter from the right.
+ */
+function fxDelTap(k, letters) {
+  const c = cfg.del, s = S('del');
+  const list = Array.isArray(letters) ? letters : letters ? [letters] : [];
+  const later = (i, fn) => { const d = (list.length - 1 - i) * D(c.tap === 'laser' ? 70 : 28); if (d > 0) setTimeout(fn, d); else fn(); };
+  let ang = 0;
+  if (c.tap === 'fire') fireOnKey(k, c, s);
+  else if (c.tap === 'slash') ang = slashOnKey(k, c, s);
+  else if (c.tap === 'shatter') shatterKey(k, c, s);
+  else if (c.tap === 'dust') dustKey(k, c, s);
+  else if (c.tap === 'glitch') glitchKey(k, c, s);
+  else if (c.tap === 'shred') shredKey(k, c, s);
+  else if (c.tap === 'rewind') fxPop(k);
+  else if (c.tap === 'swirl' || c.tap === 'vacuum') { /* the key reacts when the letters arrive */ }
+  else if (c.tap === 'laser') {
+    // The laser needs a target: no letters known means it shoots at the cursor
+    if (!list.length || !c.letterFx) laserShot(k, null, c, s, 0);
+  } else return;
+  if (!c.letterFx) return;
+  list.forEach((L, i) => later(i, () => {
+    if (c.tap === 'fire') burnLetter(L, c, s);
+    else if (c.tap === 'slash') cutLetter(L, ang, c, s);
+    else if (c.tap === 'shatter') shatterLetter(L, s);
+    else if (c.tap === 'dust') disintegrate(L.ch, L.x, L.y, 17, 400, kbVar('--kb-label', '#E8EAED'), c, s);
+    else if (c.tap === 'laser') { laserShot(k, L, c, s, 0); vaporizeLetter(L, c, s); }
+    else if (c.tap === 'rewind') rewindLetter(L, k, s);
+    else if (c.tap === 'glitch') glitchLetter(L, c, s);
+    else if (c.tap === 'shred') shredLetter(L, c, s);
+    else if (c.tap === 'swirl' || c.tap === 'vacuum') flyToKey(L, k, c.tap, s);
+  }));
+}
+
+const laserColor = () => (cfg.del.laserColor === 'green' ? '#4CFF8F' : cfg.del.laserColor === 'accent' ? accent() : '#FF3B5C');
+
+/** A beam from the backspace icon to the letter: it reaches out, holds, then thins away with sparks at the hit. */
+function laserShot(k, L, c, s, delay) {
+  const t0 = now() + delay, travel = D(c.laserSpeed), hold = D(90), fade = D(160), col = laserColor();
+  const sx = k.cx, sy = k.r.y + k.r.h * 0.42;
+  const tgt = L || caretPoint(), tx = tgt.x, ty = tgt.y;
+  const sparks = Array.from({ length: 10 }, () => ({ a: Math.atan2(sy - ty, sx - tx) + rand(-1.3, 1.3), v: rand(60, 170) }));
+  k.el.animate([{ transform: 'none' }, { transform: 'translateY(1.5px)' }, { transform: 'none' }], { duration: 140 });
+  addFx((t) => {
+    const e = t - t0;
+    if (e < 0) return true;
+    const total = travel + hold + D(420);
+    if (e >= total) return false;
+    const reach = easeIn(clamp01(e / travel)), beamA = e < travel + hold ? 1 : 1 - clamp01((e - travel - hold) / fade);
+    if (beamA > 0) {
+      const hx = lerp(sx, tx, reach), hy = lerp(sy, ty, reach);
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.shadowColor = rgba(col, s);
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = rgba(col, 0.85 * beamA * s);
+      ctx.lineWidth = c.laserWidth * 1.8 * (0.5 + 0.5 * beamA);
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(255,255,255,${0.9 * beamA * s})`;
+      ctx.lineWidth = c.laserWidth * 0.55;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(hx, hy); ctx.stroke();
+      // Muzzle glow on the backspace icon
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 10);
+      g.addColorStop(0, rgba('#FFFFFF', 0.9 * beamA * s));
+      g.addColorStop(0.4, rgba(col, 0.6 * beamA * s));
+      g.addColorStop(1, rgba(col, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(sx, sy, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    if (e >= travel) {
+      const u = (e - travel) / D(420), sec = (e - travel) / 1000;
+      ctx.strokeStyle = rgba(col, (1 - u) * 0.9 * s);
+      ctx.lineWidth = 2 * (1 - u) + 0.5;
+      ctx.beginPath(); ctx.arc(tx, ty, 3 + 14 * easeOut(u), 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = rgba(col, (1 - u) * s);
+      for (const q of sparks) {
+        ctx.beginPath();
+        ctx.arc(tx + Math.cos(q.a) * q.v * sec, ty + Math.sin(q.a) * q.v * sec + 260 * sec * sec, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    return true;
+  });
+}
+
+/** The letter the beam hits glows white-hot, swells and vaporizes. */
+function vaporizeLetter(L, c, s) {
+  const t0 = now() + D(c.laserSpeed), life = D(380), label = kbVar('--kb-label', '#E8EAED'), col = laserColor();
+  addFx((t) => {
+    const e = t - t0;
+    if (e < 0) { plainText(L.ch, L.x, L.y, rgba(label, s)); return true; }
+    const u = e / life;
+    if (u >= 1) return false;
+    const hot = u < 0.3 ? mix(label, '#FFFFFF', u / 0.3) : mix('#FFFFFF', col, (u - 0.3) / 0.7);
+    ctx.save();
+    ctx.shadowColor = rgba(col, (1 - u) * s);
+    ctx.shadowBlur = 12;
+    plainText(L.ch, L.x, L.y, rgba(hot, Math.pow(1 - u, 1.5) * s), 0, 1 + 0.3 * easeOut(u));
+    ctx.restore();
+    return true;
+  });
+}
+
+/* Disintegrate: the glyph is rasterized once, and each lit pixel becomes a grain of dust. */
+const glyphCanvas = document.createElement('canvas');
+function glyphGrains(str, size, weight, step) {
+  const w = Math.ceil(size * 1.4 * Math.max(1, [...str].length)), h = Math.ceil(size * 1.6);
+  glyphCanvas.width = w;
+  glyphCanvas.height = h;
+  const g = glyphCanvas.getContext('2d', { willReadFrequently: true });
+  g.clearRect(0, 0, w, h);
+  g.font = `${weight} ${size}px Roboto, system-ui, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = '#fff';
+  g.fillText(str, w / 2, h / 2 + 1);
+  const data = g.getImageData(0, 0, w, h).data, out = [];
+  for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+    if (data[(Math.floor(y) * w + Math.floor(x)) * 4 + 3] > 110) out.push({ dx: x - w / 2, dy: y - h / 2 });
   }
+  return { grains: out, w };
+}
+/** The glyph crumbles from left to right into grains that drift on the wind and fade. */
+function disintegrate(str, x, y, size, weight, color, c, s) {
+  const t0 = now(), life = D(c.dustLife), { grains, w } = glyphGrains(str, size, weight, 1.5);
+  const wind = c.dustWind;
+  for (const g of grains) {
+    g.start = clamp01((g.dx + w / 2) / w) * 0.45 + rand(0, 0.12);
+    if (wind === 'up') { g.vx = rand(-15, 15); g.vy = -rand(25, 60); }
+    else if (wind === 'scatter') { const a = rand(0, Math.PI * 2), v = rand(25, 80); g.vx = Math.cos(a) * v; g.vy = Math.sin(a) * v; }
+    else { g.vx = rand(25, 70); g.vy = -rand(5, 30); }
+    g.ph = rand(0, 6);
+  }
+  const gs = c.dustSize;
+  addFx((t) => {
+    const u = (t - t0) / life;
+    if (u >= 1) return false;
+    for (const g of grains) {
+      const local = (u - g.start) / (1 - g.start);
+      if (local <= 0) {
+        ctx.fillStyle = rgba(color, s);
+        ctx.fillRect(x + g.dx - 0.8, y + g.dy - 0.8, 1.6, 1.6);
+        continue;
+      }
+      const sec = local * life / 1000;
+      const px = x + g.dx + g.vx * sec + Math.sin(g.ph + sec * 9) * 3, py = y + g.dy + g.vy * sec;
+      ctx.fillStyle = rgba(local < 0.15 ? mix(color, accent(), local / 0.15) : accent(), (1 - local) * 0.9 * s);
+      const z = gs * (1 - local * 0.5);
+      ctx.fillRect(px - z / 2, py - z / 2, z, z);
+    }
+    return true;
+  });
+}
+/** The key itself sheds a little dust from its edges. */
+function dustKey(k, c, s) {
+  const t0 = now(), life = D(c.dustLife * 0.8);
+  const grains = Array.from({ length: 26 }, () => {
+    const p = edgePoint(k.r, rand(0, 2 * (k.r.w + k.r.h)));
+    return { x: p.x, y: p.y, vx: c.dustWind === 'up' ? rand(-10, 10) : rand(15, 55), vy: -rand(10, 45), d: rand(0, 0.3) };
+  });
+  addFx((t) => {
+    const u = (t - t0) / life;
+    if (u >= 1) return false;
+    for (const g of grains) {
+      const l = (u - g.d) / (1 - g.d);
+      if (l <= 0) continue;
+      const sec = l * life / 1000;
+      ctx.fillStyle = rgba(accent(), (1 - l) * 0.8 * s);
+      ctx.fillRect(g.x + g.vx * sec - 1, g.y + g.vy * sec - 1, c.dustSize * 1.4, c.dustSize * 1.4);
+    }
+    return true;
+  });
+}
+
+/** Rewind: the letter flies back down into the key that typed it, like letter float in reverse. */
+function rewindLetter(L, delKey, s) {
+  const t0 = now(), dur = D(520), label = kbVar('--kb-label', '#E8EAED');
+  const k = charKey(L.ch) || delKey, cx = (L.x + k.cx) / 2 + rand(-30, 30), cy = Math.min(L.y, k.cy) - 30;
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) { if (!L.landed) { L.landed = true; fxPop(k); } return false; }
+    const p = easeIn(u * 0.7 + 0.3 * u * u), m = 1 - p;
+    // Quadratic curve: up and over, then down into the key
+    const x = m * m * L.x + 2 * m * p * cx + p * p * k.cx, y = m * m * L.y + 2 * m * p * cy + p * p * k.cy;
+    const col = u < 0.3 ? rgba(mix(label, accent(), u / 0.3), s) : rgba(accent(), (1 - p * 0.6) * s);
+    plainText(L.ch, x, y, col, 0, 1 + 0.25 * Math.sin(Math.PI * u) - 0.4 * p);
+    return true;
+  });
+}
+
+/** Glitch: the letter splits into red, green and blue copies, jitters in slices, and blinks out. */
+function glitchLetter(L, c, s) {
+  const t0 = now(), dur = D(420), label = kbVar('--kb-label', '#E8EAED');
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) return false;
+    // Blink: a couple of dropped frames near the end
+    if (u > 0.6 && Math.random() < 0.35) return true;
+    const amp = c.glitch * (0.4 + u);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    [['#FF2A55', -1], ['#22FF88', 0], ['#3A7BFF', 1]].forEach(([col, dir]) => {
+      plainText(L.ch, L.x + dir * amp * rand(0.5, 1.2), L.y + rand(-1, 1) * amp * 0.3, rgba(col, (1 - u) * 0.9 * s));
+    });
+    ctx.restore();
+    // A few displaced horizontal slices of the real glyph
+    for (let i = 0; i < 3; i++) {
+      const sy = L.y - 10 + rand(0, 20), sh = rand(2, 5), off = rand(-amp, amp) * 1.5;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(L.x - 20 + off, sy, 40, sh); ctx.clip();
+      plainText(L.ch, L.x + off, L.y, rgba(label, (1 - u) * s));
+      ctx.restore();
+    }
+    return true;
+  });
+}
+function glitchKey(k, c, s) {
+  const t0 = now(), dur = D(260), fill = kbVar('--kb-key-2', '#3B3F49');
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) return false;
+    for (let i = 0; i < 4; i++) {
+      const y = k.r.y + rand(0, k.r.h - 4), h = rand(2, 6), off = rand(-1, 1) * c.glitch * 2;
+      ctx.fillStyle = rgba(fill, (1 - u) * s);
+      ctx.fillRect(k.r.x + off, y, k.r.w, h);
+      ctx.fillStyle = rgba(Math.random() < 0.5 ? '#FF2A55' : '#22D3FF', 0.5 * (1 - u) * s);
+      ctx.fillRect(k.r.x + off + rand(-3, 3), y, k.r.w * rand(0.3, 1), 1);
+    }
+    return true;
+  });
+}
+
+/** Shredder: the letter is cut into vertical strips that drop out of a slot, each at its own pace. */
+function shredLetter(L, c, s) {
+  const t0 = now(), dur = D(750), n = Math.round(c.strips), label = kbVar('--kb-label', '#E8EAED');
+  const w = Math.max(L.w, 10) + 4, sw = w / n;
+  const strips = Array.from({ length: n }, (_, i) => ({ x0: L.x - w / 2 + i * sw, vy: rand(140, 260), spin: rand(-1.2, 1.2), d: rand(0, 0.12) }));
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) return false;
+    for (const q of strips) {
+      const lu = clamp01((u - q.d) / (1 - q.d)), sec = lu * dur / 1000;
+      ctx.save();
+      ctx.translate(q.x0 + sw / 2, L.y + q.vy * sec * sec * 3);
+      ctx.rotate(q.spin * lu);
+      ctx.beginPath(); ctx.rect(-sw / 2 + 0.4, -14, sw - 0.8, 28); ctx.clip();
+      ctx.translate(-(q.x0 + sw / 2), -L.y);
+      plainText(L.ch, L.x, L.y, rgba(lu < 0.1 ? mix(label, accent(), lu * 10) : accent(), (1 - lu) * s));
+      ctx.restore();
+    }
+    return true;
+  });
+}
+function shredKey(k, c, s) {
+  const t0 = now(), dur = D(300);
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) return false;
+    // The slot: a bright line across the key with teeth
+    const y = k.r.y + k.r.h * 0.5;
+    ctx.strokeStyle = rgba(accent(), (1 - u) * s);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(k.r.x + 6, y); ctx.lineTo(k.r.x + k.r.w - 6, y); ctx.stroke();
+    ctx.lineWidth = 1;
+    for (let x = k.r.x + 8; x < k.r.x + k.r.w - 6; x += 5) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2, y + 3 * (1 - u)); ctx.stroke(); }
+    return true;
+  });
+}
+
+/** One tap's letters fly into backspace: swirling in, or along a curve. The key flashes as each lands. */
+function flyToKey(L, k, mode, s) {
+  const t0 = now(), dur = D(620), dx = L.x - k.cx, dy = L.y - k.cy, d0 = Math.hypot(dx, dy), a0 = Math.atan2(dy, dx);
+  const c1x = L.x + rand(-60, 60), c1y = L.y + rand(20, 60), c2x = k.cx + rand(-60, 60), c2y = k.cy - rand(50, 110);
+  addFx((t) => {
+    const u = (t - t0) / dur;
+    if (u >= 1) { if (!L.landed) { L.landed = true; ringPop(k.cx, k.cy, 10, s * 0.6); fxPop(k); } return false; }
+    let x, y, sc;
+    if (mode === 'swirl') {
+      const dist = d0 * Math.pow(1 - u, 1.4), ang = a0 + u * Math.PI * 2.5;
+      x = k.cx + Math.cos(ang) * dist; y = k.cy + Math.sin(ang) * dist; sc = 1 - 0.8 * u;
+    } else {
+      const p = Math.pow(u, 1.5), m = 1 - p;
+      x = m * m * m * L.x + 3 * m * m * p * c1x + 3 * m * p * p * c2x + p * p * p * k.cx;
+      y = m * m * m * L.y + 3 * m * m * p * c1y + 3 * m * p * p * c2y + p * p * p * k.cy;
+      sc = 1 - 0.65 * p;
+    }
+    glowText(L.ch, x, y, 18, sc, (1 - u * 0.4) * s);
+    return true;
+  });
+}
+
+/** Where each of the last n characters sits, in dock coordinates, without line breaks. Call before deleting. */
+function lettersBefore(n) {
+  const start = caret - n, dr = dock.getBoundingClientRect();
+  fieldEl.innerHTML = esc(text.slice(0, start)) + [...text.slice(start, caret)].map((ch) => `<span class="lm">${esc(ch)}</span>`).join('')
+    + '<span id="caret"></span>' + esc(text.slice(caret));
+  const out = [...fieldEl.querySelectorAll('.lm')].map((sp) => {
+    const r = sp.getBoundingClientRect(), ch = sp.textContent;
+    return { ch: ch === ' ' ? '·' : ch, x: r.left - dr.left + r.width / 2, y: r.top - dr.top + r.height / 2, w: Math.max(4, r.width) };
+  }).filter((l) => l.ch !== '\n');
+  renderField();
+  return out;
+}
+/** Chars to delete for one word back: spaces, then the word (or a run of punctuation, or one line break). */
+function wordSpan(before) {
+  let i = before.length;
+  while (i > 0 && before[i - 1] === ' ') i--;
+  if (i === 0) return before.length;
+  if (before[i - 1] === '\n') return before.length - i + 1;
+  const isW = (ch) => /[\p{L}\p{N}'’]/u.test(ch), word = isW(before[i - 1]);
+  while (i > 0 && before[i - 1] !== ' ' && before[i - 1] !== '\n' && isW(before[i - 1]) === word) i--;
+  return before.length - i;
 }
 
 function fireOnKey(k, c, s) {
@@ -1630,8 +2432,11 @@ function holdLetter(L) {
     return;
   }
   const T = holdTarget(h), dx = L.x - T.x, dy = L.y - T.y;
+  // Letters of a word deleted at once leave one after another, not in a clump
+  const launch = Math.max(now(), (h.lastLaunch || 0) + D(35));
+  h.lastLaunch = launch;
   h.parts.push({
-    g: L.ch, sx: L.x, sy: L.y, t0: now(), d0: Math.hypot(dx, dy), a0: Math.atan2(dy, dx),
+    g: L.ch, sx: L.x, sy: L.y, t0: launch, d0: Math.hypot(dx, dy), a0: Math.atan2(dy, dx),
     // Vacuum: an S-curve that dips below the letter, then swoops down into the key from above
     c1x: L.x + rand(-70, 70), c1y: L.y + rand(20, 70), c2x: T.x + rand(-80, 80), c2y: T.y - rand(60, 130),
   });
@@ -1656,13 +2461,29 @@ function drawHold(h, t) {
     case 'lava': drawLava(h, t, Math.max(0.15, grow) * (1 - closing), s); break;
     case 'box': drawBox(k, h.end ? 1 - easeOut(closing) : easeOut(held / D(200)), s); break;
     case 'void': drawVoid(k, h.end ? 1 - easeOut(closing) : easeOut(held / D(250)), s); break;
+    case 'portal': drawPortal(h, T, lerp(10, 26, grow) * (1 - easeIn(closing)), t, s); break;
   }
 
   for (let i = 0; i < h.parts.length; i++) {
-    const q = h.parts[i], u = (t - q.t0) / D(c.flight);
+    const q = h.parts[i], u = Math.max(0, (t - q.t0) / D(c.flight));
     if (u >= 1) { arrive(h, T, s); h.parts.splice(i, 1); i--; continue; }
     let x, y, sc, rot;
-    if (h.letters === 'swirl') {
+    if (h.letters === 'beam') {
+      // Tractor beam: drawn straight in along a cone of light, wobbling as it goes
+      const p = easeIn(u);
+      x = lerp(q.sx, T.x, p) + Math.sin(u * 20) * 3 * (1 - u);
+      y = lerp(q.sy, T.y, p);
+      sc = 1 - 0.7 * p;
+      rot = Math.sin(u * 14) * 0.2;
+      const nx = -(T.y - q.sy), ny = T.x - q.sx, nl = Math.hypot(nx, ny) || 1, wv = 14 * (1 - p) + 3;
+      ctx.beginPath();
+      ctx.moveTo(T.x, T.y);
+      ctx.lineTo(x + nx / nl * wv, y + ny / nl * wv);
+      ctx.lineTo(x - nx / nl * wv, y - ny / nl * wv);
+      ctx.closePath();
+      ctx.fillStyle = rgba(accent(), 0.16 * (1 - u * 0.5) * s);
+      ctx.fill();
+    } else if (h.letters === 'swirl') {
       const dist = q.d0 * Math.pow(1 - u, 1.4), ang = q.a0 + u * Math.PI * 3 * c.swirl;
       x = T.x + Math.cos(ang) * dist;
       y = T.y + Math.sin(ang) * dist;
@@ -1686,6 +2507,7 @@ function arrive(h, T, s) {
   if (h.button === 'lava') emberBurst(T.x, T.y - 6, s);
   else if (h.button === 'box' || h.button === 'void') ringPop(T.x, T.y, 12, s * 0.6);
   else if (h.button === 'blackhole') ringPop(T.x, T.y, 8, s * 0.4);
+  else if (h.button === 'portal') ringPop(T.x, T.y, 14, s * 0.6);
 }
 
 function drawBlackHole(x, y, r, t, s) {
@@ -1711,6 +2533,34 @@ function drawBlackHole(x, y, r, t, s) {
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+}
+
+/** Portal: spinning rings around a glowing center, with motes pulled inward. */
+function drawPortal(h, T, r, t, s) {
+  if (r <= 0.5) return;
+  const spin = t / 400;
+  h.motes = h.motes || [];
+  if (!h.end && Math.random() < 0.5) h.motes.push({ a: rand(0, Math.PI * 2), d: r * 2.4, t0: t });
+  const g = ctx.createRadialGradient(T.x, T.y, 0, T.x, T.y, r);
+  g.addColorStop(0, `rgba(255,255,255,${0.9 * s})`);
+  g.addColorStop(0.35, rgba(accent(), 0.8 * s));
+  g.addColorStop(1, rgba('#7A3CFF', 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(T.x, T.y, r, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    ctx.strokeStyle = rgba(i === 1 ? '#B98CFF' : accent(), (0.7 - i * 0.15) * s);
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6 + i * 3, 5]);
+    ctx.lineDashOffset = -spin * (20 + i * 12) * (i % 2 ? -1 : 1);
+    ctx.beginPath(); ctx.arc(T.x, T.y, r * (1 + i * 0.28), 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  h.motes = h.motes.filter((m) => t - m.t0 < 700);
+  for (const m of h.motes) {
+    const u = (t - m.t0) / 700, d = m.d * (1 - easeIn(u)), a = m.a + u * 2;
+    ctx.fillStyle = rgba(accent(), (1 - u) * s);
+    ctx.fillRect(T.x + Math.cos(a) * d - 1, T.y + Math.sin(a) * d - 1, 2, 2);
+  }
 }
 
 /** The key turns molten: a glowing gradient with bubbles rising and popping. */
@@ -1790,12 +2640,311 @@ function drawVoid(k, a, s) {
   ctx.stroke();
 }
 
+/** Key grow: the key swells as the swipe crosses it and settles back. */
+function growKey(k) {
+  const c = cfg.grow, sc = 1 + (c.scale - 1) * S('grow');
+  k.el.style.zIndex = '2';
+  const a = k.el.animate([{ transform: 'scale(1)' }, { transform: `scale(${sc})`, offset: 0.22 }, { transform: 'scale(1)' }],
+    { duration: D(c.duration), easing: 'cubic-bezier(.3,.7,.4,1)' });
+  a.onfinish = a.oncancel = () => { k.el.style.zIndex = ''; };
+}
+
+/* ---------- Circuit trail: grid-snapped traces with vias, branches and light pulses ---------- */
+const circuit = {
+  pts: [], stubs: [], pulses: [], lastPulse: 0,
+  start() { this.pts = []; this.stubs = []; this.pulses = []; this.lastPulse = 0; },
+  dirOf(dx, dy, eight) {
+    if (!dx && !dy) return null;
+    const a = Math.atan2(dy, dx), step = eight ? Math.PI / 4 : Math.PI / 2, q = Math.round(a / step) * step;
+    return [Math.round(Math.cos(q)), Math.round(Math.sin(q))];
+  },
+  add(x, y, t) {
+    const c = cfg.circuit, g = c.grid, eight = c.angles === '45';
+    const sx = Math.round(x / g) * g, sy = Math.round(y / g) * g, P = this.pts;
+    if (!P.length) { P.push({ x: sx, y: sy, t }); return; }
+    const last = P[P.length - 1], corner = P.length > 1 ? P[P.length - 2] : null;
+    const dir = this.dirOf(sx - last.x, sy - last.y, eight);
+    if (!dir || (Math.abs(sx - last.x) < g && Math.abs(sy - last.y) < g)) return;
+    const cur = corner ? this.dirOf(last.x - corner.x, last.y - corner.y, eight) : null;
+    const project = (from, d) => {
+      // Furthest grid point along direction d toward (sx, sy)
+      const len = ((sx - from.x) * d[0] + (sy - from.y) * d[1]) / (d[0] * d[0] + d[1] * d[1]);
+      const k = Math.max(0, Math.round(len / g)) * g;
+      return { x: from.x + d[0] * k, y: from.y + d[1] * k, t };
+    };
+    if (cur && cur[0] === dir[0] && cur[1] === dir[1]) {
+      P[P.length - 1] = project(corner, dir); // extend the straight run
+    } else {
+      // Turn: the current end becomes a via; maybe sprout a side branch from it
+      const next = project(last, dir);
+      if (next.x === last.x && next.y === last.y) return;
+      // Smoothing: a new corner needs a run of at least this many grid steps, so small wobbles don't add nodes
+      if (P.length > 1 && Math.hypot(next.x - last.x, next.y - last.y) < c.smooth * g) return;
+      if (P.length > 1 && c.stubs && Math.random() < 0.45) {
+        const side = Math.random() < 0.5 ? 1 : -1, len = g * (2 + Math.floor(rand(0, 3)));
+        this.stubs.push({ x: last.x, y: last.y, x2: last.x - dir[1] * side * len, y2: last.y + dir[0] * side * len, t });
+      }
+      P.push(next);
+    }
+  },
+  length() {
+    let L = 0;
+    for (let i = 1; i < this.pts.length; i++) L += Math.hypot(this.pts[i].x - this.pts[i - 1].x, this.pts[i].y - this.pts[i - 1].y);
+    return L;
+  },
+  pointAt(d) {
+    for (let i = 1; i < this.pts.length; i++) {
+      const a = this.pts[i - 1], b = this.pts[i], seg = Math.hypot(b.x - a.x, b.y - a.y);
+      if (d <= seg) return { x: lerp(a.x, b.x, seg ? d / seg : 0), y: lerp(a.y, b.y, seg ? d / seg : 0) };
+      d -= seg;
+    }
+    return this.pts[this.pts.length - 1];
+  },
+  draw(t, active, endAt) {
+    const c = cfg.circuit, s = S('circuit'), P = this.pts;
+    if (P.length < 2) return active;
+    const fade = active ? 1 : 1 - clamp01((t - endAt) / D(c.linger));
+    if (fade <= 0) { this.pts = []; this.stubs = []; this.pulses = []; return false; }
+    const a = fade * s, col = accent();
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // Trace: a dark bed under a bright copper-style line
+    ctx.strokeStyle = `rgba(0,0,0,${0.35 * a})`;
+    ctx.lineWidth = 5;
+    ctx.beginPath(); P.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke();
+    ctx.shadowColor = rgba(col, 0.8 * a);
+    ctx.shadowBlur = 6;
+    ctx.strokeStyle = rgba(col, 0.85 * a);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    for (const b of this.stubs) {
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(b.x2, b.y2, 2.2, 0, Math.PI * 2); ctx.fillStyle = rgba(col, 0.9 * a); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    // Vias at every corner, a pad at the start
+    for (let i = 1; i < P.length - 1; i++) {
+      ctx.beginPath(); ctx.arc(P[i].x, P[i].y, 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = kbVar('--kb-bg', '#1B1D22'); ctx.fill();
+      ctx.strokeStyle = rgba(col, 0.95 * a); ctx.lineWidth = 1.4; ctx.stroke();
+    }
+    ctx.fillStyle = rgba(col, 0.95 * a);
+    ctx.fillRect(P[0].x - 4, P[0].y - 4, 8, 8);
+    // Light pulses run from the start toward the finger
+    if (c.pulse) {
+      if (active && t - this.lastPulse > D(260)) { this.pulses.push({ t0: t }); this.lastPulse = t; }
+      const L = this.length(), speed = 0.7 / (1 / cfg.global.speed);
+      this.pulses = this.pulses.filter((q) => (t - q.t0) * speed < L + 20);
+      for (const q of this.pulses) {
+        const d = (t - q.t0) * speed, h = this.pointAt(Math.min(d, L)), tl = this.pointAt(Math.max(0, Math.min(d, L) - 14));
+        const g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, 7);
+        g.addColorStop(0, `rgba(255,255,255,${0.95 * a})`);
+        g.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(h.x, h.y, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = `rgba(255,255,255,${0.6 * a})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(tl.x, tl.y); ctx.lineTo(h.x, h.y); ctx.stroke();
+      }
+    }
+    ctx.restore();
+    return true;
+  },
+};
+
+/* ---------- Lightning, neon tube, arrow and water trails ---------- */
+/** A jagged bolt from a to b: midpoint displacement, redrawn every frame so it crackles. */
+function bolt(ax, ay, bx, by, jag, depth, out) {
+  if (depth === 0) { out.push([bx, by]); return; }
+  const mx = (ax + bx) / 2 + rand(-jag, jag), my = (ay + by) / 2 + rand(-jag, jag);
+  bolt(ax, ay, mx, my, jag / 2, depth - 1, out);
+  bolt(mx, my, bx, by, jag / 2, depth - 1, out);
+}
+function strokeBolt(pts, col, a, width) {
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+  ctx.shadowColor = rgba(col, a);
+  ctx.shadowBlur = 12;
+  ctx.strokeStyle = rgba(col, 0.75 * a);
+  ctx.lineWidth = width * 2.2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = `rgba(255,255,255,${0.95 * a})`;
+  ctx.lineWidth = width * 0.7;
+  ctx.stroke();
+}
+function drawLightning(tr, t) {
+  const c = cfg.lightning, s = S('lightning');
+  const col = { accent: accent(), violet: '#B98CFF', white: '#F2F6FF', green: '#5CFF9D', custom: c.custom }[c.color] || '#7FE3FF';
+  const P = tr.picks, linger = D(c.linger);
+  const fade = tr.active ? 1 : 1 - clamp01((t - tr.endAt) / linger);
+  if (fade <= 0 || !P.length) return tr.active;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 1; i < P.length; i++) {
+    // Each arc flashes bright as it forms, then settles to a flicker
+    const age = t - P[i].t, flash = 1 - clamp01(age / D(200));
+    const a = fade * s * (0.45 + 0.55 * flash) * (0.7 + 0.3 * Math.random());
+    const pts = [[P[i - 1].x, P[i - 1].y]];
+    bolt(P[i - 1].x, P[i - 1].y, P[i].x, P[i].y, c.jag * 2, 4, pts);
+    strokeBolt(pts, col, a, 1.3);
+    if (c.branches && Math.random() < 0.35) {
+      const from = pts[Math.floor(rand(2, pts.length - 2))], fork = [[from[0], from[1]]];
+      bolt(from[0], from[1], from[0] + rand(-28, 28), from[1] + rand(-28, 28), c.jag, 3, fork);
+      strokeBolt(fork, col, a * 0.6, 0.8);
+    }
+  }
+  // A live bolt from the last picked letter to the finger
+  const head = tr.pts[tr.pts.length - 1], last = P[P.length - 1];
+  if (tr.active && head && Math.hypot(head.x - last.x, head.y - last.y) > 6) {
+    const pts = [[last.x, last.y]];
+    bolt(last.x, last.y, head.x, head.y, c.jag * 1.5, 4, pts);
+    strokeBolt(pts, col, s * 0.8, 1);
+  }
+  ctx.restore();
+  return true;
+}
+function drawNeon(tr, t) {
+  const c = cfg.neon, s = S('neon'), pts = tr.pts;
+  const col = c.color === 'accent' ? accent() : c.color === 'cyan' ? '#3FE6FF' : c.color === 'lime' ? '#B8FF4A' : '#FF4FD8';
+  const win = D(c.length);
+  if (pts.length < 2) return false;
+  if (c.color === 'rainbow') return drawNeonRainbow(tr, t, win, c, s);
+  // Flicker: the whole tube dips now and then, like a failing transformer
+  const flick = Math.random() < c.flicker * 0.25 ? 0.35 : 1;
+  let any = false;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const pass of [0, 1]) {
+    ctx.beginPath();
+    let started = false, minF = 1;
+    for (let i = 0; i < pts.length; i++) {
+      const age = t - pts[i].t;
+      if (age > win) continue;
+      any = true;
+      minF = Math.min(minF, 1 - age / win);
+      if (!started) { ctx.moveTo(pts[i].x, pts[i].y); started = true; } else ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    if (!started) break;
+    const head = tr.active ? 1 : clamp01(1 - (t - tr.endAt) / win);
+    if (pass === 0) {
+      ctx.shadowColor = rgba(col, flick * head * s);
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = rgba(col, 0.55 * flick * head * s);
+      ctx.lineWidth = 9;
+    } else {
+      // Two thin bright cores side by side read as glass tubing
+      ctx.shadowBlur = 4;
+      ctx.strokeStyle = `rgba(255,255,255,${0.9 * flick * head * s})`;
+      ctx.lineWidth = 2;
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+  return any || tr.active;
+}
+/** Rainbow neon: the same glass tube, with the hue running along it and drifting over time. */
+function drawNeonRainbow(tr, t, win, c, s) {
+  const pts = tr.pts, flick = Math.random() < c.flicker * 0.25 ? 0.35 : 1;
+  const head = tr.active ? 1 : clamp01(1 - (t - tr.endAt) / win);
+  let any = false;
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let i = 1; i < pts.length; i++) {
+    if (t - pts[i].t > win) continue;
+    any = true;
+    const hue = (i * 7 + t / 8) % 360, a = flick * head * s;
+    ctx.beginPath(); ctx.moveTo(pts[i - 1].x, pts[i - 1].y); ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.shadowColor = `hsla(${hue},100%,60%,${a})`;
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = `hsla(${hue},100%,62%,${0.55 * a})`;
+    ctx.lineWidth = 9;
+    ctx.stroke();
+    ctx.shadowBlur = 3;
+    ctx.strokeStyle = `rgba(255,255,255,${0.85 * a})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.restore();
+  return any || tr.active;
+}
+/** Arrow trail: chevrons placed along the path, each pointing the way the finger was moving. */
+function drawArrows(tr, t) {
+  const c = cfg.arrows, s = S('arrows'), win = D(c.length), pts = tr.pts;
+  if (pts.length < 2) return tr.active;
+  const col = c.color === 'white' ? '#FFFFFF' : accent();
+  let carry = 0, any = false;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (!len) continue;
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
+    let d = c.spacing - carry;
+    while (d <= len) {
+      const age = t - lerp(a.t, b.t, d / len);
+      if (age < win) {
+        any = true;
+        const f = 1 - age / win, x = lerp(a.x, b.x, d / len), y = lerp(a.y, b.y, d / len), z = c.size * (0.6 + 0.4 * f);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        ctx.strokeStyle = rgba(col, 0.9 * f * s);
+        ctx.beginPath(); ctx.moveTo(-z, -z); ctx.lineTo(0, 0); ctx.lineTo(-z, z); ctx.stroke();
+        ctx.restore();
+      }
+      d += c.spacing;
+    }
+    carry = (carry + len) % c.spacing;
+  }
+  ctx.restore();
+  return any || tr.active;
+}
+/** Water wake: a wet streak behind the finger, and ripples spreading from points along the path. */
+function drawWater(tr, t) {
+  const c = cfg.water, s = S('water'), col = c.color === 'accent' ? accent() : '#8FD0FF', life = D(c.life);
+  const pts = tr.pts.filter((p) => t - p.t < life * 0.6);
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (let i = 1; i < pts.length; i++) {
+    const f = 1 - (t - pts[i].t) / (life * 0.6);
+    ctx.strokeStyle = rgba(col, 0.18 * f * s);
+    ctx.lineWidth = 10 * f + 2;
+    ctx.beginPath(); ctx.moveTo(pts[i - 1].x, pts[i - 1].y); ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke();
+  }
+  tr.ripples = (tr.ripples || []).filter((q) => t - q.t0 < life);
+  for (const q of tr.ripples) {
+    const u = (t - q.t0) / life;
+    for (let k = 0; k < 2; k++) {
+      const uu = u - k * 0.18;
+      if (uu <= 0) continue;
+      const r = c.size * easeOut(uu);
+      ctx.strokeStyle = rgba(col, 0.6 * (1 - uu) * s);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.ellipse(q.x, q.y, r, r * 0.55, 0, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  return tr.active || tr.ripples.length > 0 || pts.length > 1;
+}
 /* ---------- Swipe trail system ---------- */
 const trail = {
-  pts: [], dust: [], active: false, endAt: 0,
-  start(x, y) { this.pts = [{ x, y, t: now(), v: 0 }]; this.active = true; this.endAt = 0; kick(); },
+  pts: [], dust: [], picks: [], active: false, endAt: 0,
+  start(x, y) { this.pts = [{ x, y, t: now(), v: 0 }]; this.picks = []; this.active = true; this.endAt = 0; circuit.start(); circuit.add(x, y, now()); kick(); },
   add(x, y) {
     const t = now(), l = this.pts[this.pts.length - 1];
+    if (cfg.circuit.on) circuit.add(x, y, t);
+    if (cfg.water.on) {
+      // Drop a ripple every few dp along the path
+      this.ripples = this.ripples || [];
+      const lastR = this.ripples[this.ripples.length - 1];
+      if (!lastR || Math.hypot(x - lastR.x, y - lastR.y) >= cfg.water.spacing) this.ripples.push({ x, y, t0: t });
+    }
     const v = l ? Math.hypot(x - l.x, y - l.y) / Math.max(1, t - l.t) : 0;
     this.pts.push({ x, y, t, v });
     if (cfg.dust.on && l) {
@@ -1810,6 +2959,11 @@ const trail = {
     const pts = this.pts;
     // FUTO's own thin trail
     if (cfg.futoTrail.on) alive = this.line(pts, t, D(220), () => 3, () => accent(), 0.9) || alive;
+    if (cfg.circuit.on && circuit.draw(t, this.active, this.endAt)) alive = true;
+    if (cfg.lightning.on && drawLightning(this, t)) alive = true;
+    if (cfg.neon.on && drawNeon(this, t)) alive = true;
+    if (cfg.arrows.on && drawArrows(this, t)) alive = true;
+    if (cfg.water.on && drawWater(this, t)) alive = true;
     if (cfg.comet.on) {
       const c = cfg.comet, base = hexHue(accent()), s = S('comet');
       alive = this.line(pts, t, D(c.length), (f) => c.width * f, (f) => `hsla(${(base + c.hue * (1 - f)) % 360},90%,68%,1)`, s, true) || alive;
@@ -1890,89 +3044,207 @@ function fxTrace(k, index) {
   });
 }
 
-/* ---------- Letter hop v2: letters gather on the number row ---------- */
+/* ---------- Letter hop v3: letters gather on the number row; word letters and extras exit apart ---------- */
 let hop = null;
+const easeOutBounce = (x) => {
+  x = clamp01(x);
+  const n = 7.5625, d = 2.75;
+  if (x < 1 / d) return n * x * x;
+  if (x < 2 / d) return n * (x -= 1.5 / d) * x + 0.75;
+  if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + 0.9375;
+  return n * (x -= 2.625 / d) * x + 0.984375;
+};
 function hopStart() {
   if (!cfg.hop.on) return;
   hop = { letters: [], state: 'collect', t0: now() };
   ROW_EL[0].classList.add('hop');
   const h = hop;
-  addFx((t) => {
-    const nums = KEYS.filter((k) => k.t === 'num');
-    const n = h.letters.length, left = nums[0].r.x, right = nums[nums.length - 1].r.x + nums[nums.length - 1].r.w;
-    const slotX = (i) => (n <= 10 ? nums[i].cx : left + (i + 0.5) * (right - left) / n);
-    const slotY = nums[0].cy, s = S('hop');
-    let alive = h.state === 'collect';
-    h.letters.forEach((l, i) => {
-      if (h.state === 'collect') {
-        const p = clamp01((t - l.t0) / D(280));
-        const tx = slotX(i), ep = easeOut(p);
-        l.x = p < 1 ? lerp(l.fx, tx, ep) : l.x + (tx - l.x) * 0.3;
-        l.y = p < 1 ? lerp(l.fy, slotY, ep) - 24 * Math.sin(Math.PI * ep) : slotY;
-        glowText(l.g, l.x, l.y, 20, 0.8 + 0.2 * ep, clamp01(p * 4) * s);
-        return;
-      }
-      const e = t - h.exitAt - i * D(h.exit === 'burn' ? 28 : 34);
-      if (e < 0) { alive = true; glowText(l.g, l.x, l.y, 20, 1, s); return; }
-      if (h.exit === 'burn') {
-        const u = e / D(520);
-        if (u >= 1) return;
-        alive = true;
-        if (!l.embers) {
-          l.embers = true;
-          emberBurst(l.x, l.y, s);
-        }
-        glowText(l.g, l.x + rand(-1, 1) * (1 - u), l.y - 6 * u, 20, 1 - 0.4 * u, (1 - u) * s, mix(accent(), '#FF8A3D', clamp01(u * 2.5)));
-      } else if (h.exit === 'fly') {
-        const del = keyOf((k) => k.t === 'del'), u = e / D(420);
-        if (u >= 1) { if (!l.landed) { l.landed = true; fxPop(del); } return; }
-        alive = true;
-        const p = easeIn(u) * 0.6 + u * 0.4;
-        const x = lerp(l.x, del.cx, p), y = lerp(l.y, del.cy, p) - 40 * Math.sin(Math.PI * p);
-        glowText(l.g, x, y, 20, 1 - 0.65 * p, (1 - u * 0.5) * s);
-      } else {
-        // Form: slide into the word above the suggestions, hold, then pop
-        const u = e / D(260), hold = D(380), w = h.word, m = w.length;
-        const tx = SUGG.x + SUGG.w / 2 + (l.wi - (m - 1) / 2) * 13, ty = SUGG.y + SUGG.h / 2;
-        if (l.wi < 0) {
-          const fu = clamp01(u);
-          if (fu >= 1) return;
-          alive = true;
-          glowText(l.g, l.x, l.y + 300 * fu * fu, 20, 1, (1 - fu) * s);
-          return;
-        }
-        if (e > D(260) + hold + D(240)) return;
-        alive = true;
-        const pu = clamp01(u), x = lerp(l.x, tx, easeOutBack(pu)), y = lerp(l.y, ty, easeOutBack(pu));
-        const popU = clamp01((e - D(260) - hold) / D(240));
-        glowText(w[l.wi], x, y, 20, 1.1 + 0.4 * popU, (1 - popU) * s);
-      }
-    });
-    if (!alive && h.state !== 'collect') {
-      if (hop === h || !hop) ROW_EL[0].classList.remove('hop');
-      return false;
-    }
-    return true;
+  addFx((t) => drawHop(h, t));
+}
+function drawHop(h, t) {
+  const c = cfg.hop, s = S('hop'), nums = KEYS.filter((k) => k.t === 'num');
+  const n = h.letters.length, left = nums[0].r.x, right = nums[nums.length - 1].r.x + nums[nums.length - 1].r.w;
+  const slotX = (i) => (n <= 10 ? nums[i].cx : left + (i + 0.5) * (right - left) / n), slotY = nums[0].cy;
+  let alive = h.state === 'collect';
+  h.letters.forEach((l, i) => {
+    if (h.state === 'collect') collectLetter(l, slotX(i), slotY, t, s, c.collect);
+    else if (exitLetter(h, l, t, s, c, (left + right) / 2, slotY)) alive = true;
   });
+  if (!alive && h.state !== 'collect') {
+    if (hop === h || !hop) ROW_EL[0].classList.remove('hop');
+    return false;
+  }
+  return true;
+}
+/** A letter on its way from its key to its slot on the number row, then resting there. */
+function collectLetter(l, tx, ty, t, s, style) {
+  const dur = D(style === 'zip' ? 170 : style === 'bounce' ? 420 : 280), p = clamp01((t - l.t0) / dur), ep = easeOut(p);
+  let x, y, rot = 0, sc = 0.8 + 0.2 * ep;
+  if (p >= 1) {
+    l.x += (tx - l.x) * 0.3;
+    l.y = ty;
+    glowText(l.g, l.x, l.y, 20, 1, s);
+    return;
+  }
+  if (style === 'bounce') {
+    // Up above the slot, then drop onto it and bounce
+    const up = clamp01(p / 0.4), down = clamp01((p - 0.4) / 0.6);
+    x = lerp(l.fx, tx, easeOut(up));
+    y = p < 0.4 ? lerp(l.fy, ty - 34, easeOut(up)) : lerp(ty - 34, ty, easeOutBounce(down));
+  } else if (style === 'zip') {
+    x = lerp(l.fx, tx, ep);
+    y = lerp(l.fy, ty, ep);
+    // A short streak behind it
+    const bp = easeOut(Math.max(0, p - 0.3));
+    ctx.strokeStyle = rgba(accent(), 0.5 * (1 - p) * s);
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(lerp(l.fx, tx, bp), lerp(l.fy, ty, bp)); ctx.lineTo(x, y); ctx.stroke();
+  } else {
+    x = lerp(l.fx, tx, ep);
+    y = lerp(l.fy, ty, ep) - 24 * Math.sin(Math.PI * ep);
+    if (style === 'spin') rot = (1 - ep) * Math.PI * 2;
+  }
+  l.x = x;
+  l.y = y;
+  glowText(l.g, x, y, 20, sc, clamp01(p * 4) * s, accent(), rot);
+}
+/** After the word lands: extras leave first (greyed if asked), then the word's own letters. */
+function exitLetter(h, l, t, s, c, cx, cy) {
+  const grey = kbVar('--kb-label-2', '#AEB3BE');
+  if (l.wi < 0) {
+    const start = h.exitAt + (c.mark ? D(160) : 0) + l.order * D(25), e = t - start;
+    if (e < 0) {
+      // Marked: the extras dim to grey for a moment, so it is clear they were not in the word
+      const k = c.mark ? clamp01((t - h.exitAt) / D(120)) : 0;
+      glowText(l.g, l.x, l.y, 20, 1 - 0.1 * k, (1 - 0.35 * k) * s, mix(accent(), grey, k));
+      return true;
+    }
+    const col = c.mark ? grey : accent();
+    switch (c.extra) {
+      case 'burn': {
+        const u = e / D(520);
+        if (u >= 1) return false;
+        if (!l.embers) { l.embers = true; emberBurst(l.x, l.y, s); }
+        glowText(l.g, l.x + rand(-1, 1) * (1 - u), l.y - 6 * u, 20, 1 - 0.4 * u, (1 - u) * s, mix(col, '#FF8A3D', clamp01(u * 2.5)));
+        return true;
+      }
+      case 'dust':
+        if (!l.dusted) { l.dusted = true; disintegrate(l.g, l.x, l.y, 20, 500, col, { dustLife: 800, dustWind: 'up', dustSize: 1.3 }, s); }
+        return false;
+      case 'fly': {
+        const del = keyOf((k) => k.t === 'del'), u = e / D(420);
+        if (u >= 1) { if (!l.landed) { l.landed = true; fxPop(del); } return false; }
+        const p = easeIn(u) * 0.6 + u * 0.4;
+        glowText(l.g, lerp(l.x, del.cx, p), lerp(l.y, del.cy, p) - 40 * Math.sin(Math.PI * p), 20, 1 - 0.65 * p, (1 - u * 0.5) * s, col);
+        return true;
+      }
+      case 'shake': {
+        const u = e / D(420);
+        if (u >= 1) return false;
+        glowText(l.g, l.x + Math.sin(u * 32) * 4 * (1 - u), l.y, 20, 1, (1 - u) * s, mix(col, '#F28B82', 0.6));
+        return true;
+      }
+      case 'fade': {
+        const u = e / D(300);
+        if (u >= 1) return false;
+        glowText(l.g, l.x, l.y, 20, 1 - u, (1 - u) * s, col);
+        return true;
+      }
+      default: { // fall
+        const u = e / D(700), sec = e / 1000;
+        if (u >= 1) return false;
+        glowText(l.g, l.x + l.vx * sec, l.y - 50 * sec + 900 * sec * sec, 20, 1, (1 - u) * s, col, l.spin * sec);
+        return true;
+      }
+    }
+  }
+  // A letter of the word; magnet and merge move together, the rest go in turn
+  const together = c.word === 'join';
+  const start = h.exitAt + D(c.mark ? 200 : 80) + (together ? 0 : l.order * D(c.word === 'type' ? 90 : 40)), e = t - start;
+  if (e < 0) { glowText(l.g, l.x, l.y, 20, 1.08, s); return true; }
+  switch (c.word) {
+    case 'text': {
+      // Each letter flies to its own spot in the text it just became
+      const u = e / D(480);
+      if (u >= 1) return false;
+      const p = easeOut(u), tx = h.text.x - (h.word.length + 0.5 - l.wi) * 8.5, ty = h.text.y;
+      glowText(h.word[l.wi], lerp(l.x, tx, p), lerp(l.y, ty, p) - 50 * Math.sin(Math.PI * p), 20, 1 - 0.3 * p, (1 - u * u) * s);
+      return true;
+    }
+    case 'form': {
+      const u = e / D(260), hold = D(380), w = h.word, m = w.length;
+      const tx = SUGG.x + SUGG.w / 2 + (l.wi - (m - 1) / 2) * 13, ty = SUGG.y + SUGG.h / 2;
+      if (e > D(260) + hold + D(240)) return false;
+      const pu = clamp01(u), x = lerp(l.x, tx, easeOutBack(pu)), y = lerp(l.y, ty, easeOutBack(pu));
+      const popU = clamp01((e - D(260) - hold) / D(240));
+      glowText(w[l.wi], x, y, 20, 1.1 + 0.4 * popU, (1 - popU) * s);
+      return true;
+    }
+    case 'type': {
+      // Typewriter: each letter is struck into the suggestion bar in order, with a carriage caret
+      const w = h.word, m = w.length, tx = SUGG.x + SUGG.w / 2 + (l.wi - (m - 1) / 2) * 12, ty = SUGG.y + SUGG.h / 2;
+      const fly = clamp01(e / D(140)), endAt = D(90) * (m - l.order) + D(700);
+      if (e > endAt + D(250)) return false;
+      const out = clamp01((e - endAt) / D(250));
+      const x = lerp(l.x, tx, easeIn(fly)), y = lerp(l.y, ty, easeIn(fly));
+      const stamp = fly >= 1 ? 1 + 0.4 * (1 - easeOut(clamp01((e - D(140)) / D(120)))) : 1;
+      glowText(w[l.wi], x, y, 20, stamp, (1 - out) * s);
+      if (fly >= 1 && l.order === h.letters.filter((q) => q.wi >= 0).length - 1 && out < 1) {
+        // The caret blinks after the last letter
+        if (Math.floor(e / 260) % 2 === 0) { ctx.fillStyle = rgba(accent(), (1 - out) * s); ctx.fillRect(tx + 8, ty - 9, 2, 18); }
+      }
+      return true;
+    }
+    case 'join': {
+      // Pulled into their places in the suggested word, faster and faster, then the word fades
+      const w = h.word, m = w.length, tx = SUGG.x + SUGG.w / 2 + (l.wi - (m - 1) / 2) * 11.5, ty = SUGG.y + SUGG.h / 2;
+      const pull = clamp01(e / D(380));
+      if (pull < 1) {
+        const p = pull * pull * pull;
+        glowText(l.g, lerp(l.x, tx, p), lerp(l.y, ty, p), 20, 1 - 0.15 * p, s);
+        return true;
+      }
+      if (l.order === 0 && !l.clacked) { l.clacked = true; ringPop(SUGG.x + SUGG.w / 2, ty, 28, s * 0.7); }
+      const f = clamp01((e - D(380) - D(160)) / D(450));
+      if (f >= 1) return false;
+      glowText(w[l.wi], tx, ty, 20, 0.85, (1 - f) * s, mix('#FFFFFF', accent(), clamp01((e - D(380)) / D(200))));
+      return true;
+    }
+    case 'glow': {
+      const u = e / D(450);
+      if (u >= 1) return false;
+      glowText(l.g, l.x, l.y, 20, 1 + 0.35 * easeOut(u), (1 - u) * s, mix('#FFFFFF', accent(), u));
+      return true;
+    }
+    default: { // rise: a little hop, then up and away in a wave
+      const u = e / D(560);
+      if (u >= 1) return false;
+      const y = l.y - 10 * Math.sin(Math.PI * clamp01(u * 3)) - 80 * easeIn(u);
+      glowText(l.g, l.x, y, 20, 1 + 0.2 * u, (1 - u * u) * s);
+      return true;
+    }
+  }
 }
 function hopAdd(k) {
   if (!hop || hop.state !== 'collect' || hop.letters.length >= 24) return;
-  hop.letters.push({ g: k.c, fx: k.cx, fy: k.cy, x: k.cx, y: k.cy, t0: now() });
+  hop.letters.push({ g: k.c, fx: k.cx, fy: k.cy, x: k.cx, y: k.cy, t0: now(), vx: rand(-40, 40), spin: rand(-4, 4) });
 }
 function hopFinish(word) {
   if (!hop) return;
   const h = hop;
   h.state = 'exit';
-  h.exit = cfg.hop.exit;
   h.exitAt = now();
   h.word = word;
-  if (h.exit === 'form') {
-    let j = 0;
-    for (const l of h.letters) l.wi = -1;
-    [...word.toLowerCase()].forEach((ch, wi) => {
-      for (let k = j; k < h.letters.length; k++) if (h.letters[k].g === ch) { h.letters[k].wi = wi; j = k + 1; return; }
-    });
-  }
+  h.text = caretPoint();
+  // Match the word's letters to picked letters in order: matched ones are "in the word"
+  let j = 0;
+  for (const l of h.letters) l.wi = -1;
+  [...word.toLowerCase()].forEach((ch, wi) => {
+    for (let k = j; k < h.letters.length; k++) if (h.letters[k].g === ch) { h.letters[k].wi = wi; j = k + 1; return; }
+  });
+  let a = 0, b = 0;
+  for (const l of h.letters) l.order = l.wi >= 0 ? a++ : b++;
   hop = null;
   kick();
 }
@@ -2063,12 +3335,50 @@ function chargeStart(k, x) {
     if (ch.cancelled) return false;
     const e = t - t0;
     if (e >= timeout) {
-      if (c.style === 'liquid') splash(k, s); else ringPop(cx, cy, rad * 1.7, s);
+      if (c.style === 'liquid') splash(k, s);
+      else if (c.style === 'fuse') { emberBurst(k.cx, k.r.y, s); ringPop(cx, cy, rad * 1.5, s); }
+      else ringPop(cx, cy, rad * 1.7, s);
       return false;
     }
     if (e < appear) return true;
     const p = (e - appear) / (timeout - appear), fadeIn = clamp01((e - appear) / 80);
-    if (c.style === 'ring') {
+    if (c.style === 'orbit') {
+      // Sparks circle the key, faster and brighter as the hold charges
+      for (let i = 0; i < 3; i++) {
+        const a = -Math.PI / 2 + (t / (260 - 160 * p)) + (i * Math.PI * 2) / 3;
+        const x = cx + Math.cos(a) * rad, y = cy + Math.sin(a) * rad * 0.85;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, 6 + 3 * p);
+        g.addColorStop(0, `rgba(255,255,255,${fadeIn * s})`);
+        g.addColorStop(1, rgba(accent(), 0));
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, 6 + 3 * p, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (c.style === 'fuse') {
+      // A spark burns along the key's outline; the burnt part glows behind it
+      const per = 2 * (k.r.w + k.r.h), start = k.r.w / 2, burnt = per * p;
+      ctx.strokeStyle = rgba('#FF8A3D', 0.8 * fadeIn * s);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let d = 0; d <= burnt; d += 3) { const q = edgePoint(k.r, start + d); d ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }
+      ctx.stroke();
+      const sp = edgePoint(k.r, start + burnt);
+      ctx.fillStyle = `rgba(255,240,180,${fadeIn * s})`;
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, 2.5, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 3; i++) { ctx.fillStyle = fire(Math.random(), fadeIn * s); ctx.fillRect(sp.x + rand(-6, 6), sp.y + rand(-6, 6), 1.5, 1.5); }
+    } else if (c.style === 'clock') {
+      // A clock hand sweeps around, wiping the key with light
+      ctx.save();
+      roundRect(k.r.x, k.r.y, k.r.w, k.r.h, 9);
+      ctx.clip();
+      const r = Math.hypot(k.r.w, k.r.h);
+      ctx.fillStyle = rgba(accent(), 0.4 * fadeIn * s);
+      ctx.beginPath(); ctx.moveTo(k.cx, k.cy); ctx.arc(k.cx, k.cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = rgba('#FFFFFF', 0.8 * fadeIn * s);
+      ctx.lineWidth = 1.5;
+      const ha = -Math.PI / 2 + Math.PI * 2 * p;
+      ctx.beginPath(); ctx.moveTo(k.cx, k.cy); ctx.lineTo(k.cx + Math.cos(ha) * r, k.cy + Math.sin(ha) * r); ctx.stroke();
+      ctx.restore();
+    } else if (c.style === 'ring') {
       ctx.lineCap = 'round';
       ctx.lineWidth = c.thickness;
       ctx.strokeStyle = rgba(accent(), 0.18 * fadeIn * s);
@@ -2121,26 +3431,52 @@ function splash(k, s) {
 
 /* ---------- Spacebar trackpad ---------- */
 const trackpad = {
-  level: 0, target: 0, last: 0, x: 0, y: 0,
-  show(x, y) { this.target = 1; this.x = x; this.y = y; if (cfg.trackpad.on) dock.classList.add('tp'); kick(); },
-  move(x, y) { this.x = x; this.y = y; kick(); },
+  level: 0, target: 0, last: 0, x: 0, y: 0, vx: 0, vy: 0, moveAt: 0, streaks: [],
+  ax: 0, ay: 0, dax: 0, day: 0, pulses: [],
+  show(x, y) {
+    this.target = 1; this.x = x; this.y = y; this.vx = this.vy = 0; this.streaks = []; this.pulses = [];
+    // Rails are anchored where the drag began and ratchet by one line or letter per cursor step
+    this.ax = this.dax = x; this.ay = this.day = y;
+    if (cfg.trackpad.on) dock.classList.add('tp'); kick();
+  },
+  step(dx, dy) {
+    this.ax += dx * 14;
+    this.ay += dy * 24;
+    this.pulses.push({ t0: now(), dx, dy, x: this.x, y: this.y });
+    kick();
+  },
+  move(x, y) {
+    // Smoothed finger velocity, for the streaks and arrows
+    const t = now(), dt = Math.max(8, t - (this.moveAt || t - 16));
+    this.vx = this.vx * 0.7 + ((x - this.x) / dt) * 0.3;
+    this.vy = this.vy * 0.7 + ((y - this.y) / dt) * 0.3;
+    this.moveAt = t;
+    this.x = x; this.y = y; kick();
+  },
   hide() { this.target = 0; dock.classList.remove('tp'); kick(); },
   draw(t) {
-    const dt = this.last ? t - this.last : 0;
+    // First frame of a fade counts as one frame, so a fade-in always gets going
+    const dt = this.last ? Math.min(64, t - this.last) : 16;
     this.last = t;
     this.level = this.level < this.target ? Math.min(1, this.level + dt / 150) : Math.max(this.target, this.level - dt / 200);
-    if (!cfg.trackpad.on || this.level <= 0) { this.last = this.level > 0 ? t : 0; return false; }
+    if (this.level <= 0 && this.target <= 0) { this.last = 0; return false; }
+    if (!cfg.trackpad.on) return this.target > 0;
     const c = cfg.trackpad, s = S('trackpad'), L = this.level;
     document.documentElement.style.setProperty('--tp-label', String(1 - c.labels));
-    ctx.fillStyle = cfg.global.kbTheme === 'light' ? `rgba(228,231,236,${c.dim * L * s})` : `rgba(10,11,14,${c.dim * L * s})`;
+    const dimRgb = cfg.global.kbTheme === 'light' ? '228,231,236' : '10,11,14', dimA = c.dim * L * s;
+    if (c.look === 'glass') {
+      const g = ctx.createRadialGradient(this.x, this.y, 20, this.x, this.y, 120);
+      g.addColorStop(0, `rgba(${dimRgb},${dimA * 0.15})`);
+      g.addColorStop(1, `rgba(${dimRgb},${dimA})`);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = `rgba(${dimRgb},${dimA})`;
+    }
     ctx.fillRect(KB.x, KB.y, KB.w, KB.h);
-    const step = 22;
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = rgba(accent(), 0.4 * c.grid * L * s);
-    ctx.beginPath();
-    for (let x = KB.x + ((this.x - KB.x) % step); x < KB.x + KB.w; x += step) { ctx.moveTo(x, KB.y); ctx.lineTo(x, KB.y + KB.h); }
-    for (let y = KB.y + ((this.y - KB.y) % step); y < KB.y + KB.h; y += step) { ctx.moveTo(KB.x, y); ctx.lineTo(KB.x + KB.w, y); }
-    ctx.stroke();
+    // Ease the rail anchors toward their stepped positions, so the ratchet slides rather than jumps
+    this.dax += (this.ax - this.dax) * 0.35;
+    this.day += (this.ay - this.day) * 0.35;
+    drawTrackpadLook(this, t, c, L, s);
     if (c.halo > 0) {
       const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, c.halo * 1.6);
       g.addColorStop(0, rgba(accent(), 0.55 * L * s));
@@ -2151,9 +3487,133 @@ const trackpad = {
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(this.x, this.y, c.halo, 0, Math.PI * 2); ctx.stroke();
     }
+    const speed = Math.hypot(this.vx, this.vy), still = t - this.moveAt > 120;
+    const ux = speed ? this.vx / speed : 0, uy = speed ? this.vy / speed : 0;
+    if (c.warp) {
+      // Streaks race past against the direction of travel, faster and longer the faster you drag
+      if (!still && speed > 0.05 && this.streaks.length < 60) {
+        for (let i = 0; i < 2; i++) this.streaks.push({ x: rand(KB.x, KB.x + KB.w), y: rand(KB.y, KB.y + KB.h), t0: t, ux, uy, len: 20 + speed * 60 });
+      }
+      ctx.lineCap = 'round';
+      this.streaks = this.streaks.filter((q) => t - q.t0 < 380);
+      for (const q of this.streaks) {
+        const u = (t - q.t0) / 380, d = u * 140;
+        const x = q.x - q.ux * d, y = q.y - q.uy * d;
+        ctx.strokeStyle = rgba(accent(), 0.55 * (1 - u) * L * s);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - q.ux * q.len, y - q.uy * q.len); ctx.stroke();
+      }
+    }
+    if (c.chevrons && !still && speed > 0.03) {
+      // Three arrows ahead of the finger, rippling outward in the travel direction
+      const ang = Math.atan2(uy, ux);
+      for (let i = 0; i < 3; i++) {
+        const ph = ((t / 300) + i / 3) % 1, d = 34 + ph * 40;
+        ctx.save();
+        ctx.translate(this.x + ux * d, this.y + uy * d);
+        ctx.rotate(ang);
+        ctx.strokeStyle = rgba(accent(), (1 - ph) * 0.9 * L * s);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-5, -8); ctx.lineTo(4, 0); ctx.lineTo(-5, 8); ctx.stroke();
+        ctx.restore();
+      }
+    }
     return this.level !== this.target || this.target > 0;
   },
 };
+
+/** The trackpad's pattern, by look. Every look stays put under the finger. */
+function drawTrackpadLook(tp, t, c, L, s) {
+  const a = c.grid * L * s, col = accent(), fx = tp.x, fy = tp.y;
+  const near = (d, r) => Math.max(0, 1 - d / r);
+  ctx.save();
+  ctx.lineCap = 'round';
+  switch (c.look) {
+    case 'fixed': {
+      // A still grid; the lines near the finger light up
+      const step = 22;
+      ctx.lineWidth = 1;
+      for (let x = KB.x + step / 2; x < KB.x + KB.w; x += step) {
+        ctx.strokeStyle = rgba(col, (0.12 + 0.75 * near(Math.abs(x - fx), 70)) * a);
+        ctx.beginPath(); ctx.moveTo(x, KB.y); ctx.lineTo(x, KB.y + KB.h); ctx.stroke();
+      }
+      for (let y = KB.y + step / 2; y < KB.y + KB.h; y += step) {
+        ctx.strokeStyle = rgba(col, (0.12 + 0.75 * near(Math.abs(y - fy), 70)) * a);
+        ctx.beginPath(); ctx.moveTo(KB.x, y); ctx.lineTo(KB.x + KB.w, y); ctx.stroke();
+      }
+      break;
+    }
+    case 'dots': {
+      // A still dot matrix that swells and brightens around the finger
+      const step = 18;
+      for (let y = KB.y + step / 2; y < KB.y + KB.h; y += step) {
+        for (let x = KB.x + step / 2; x < KB.x + KB.w; x += step) {
+          const n = near(Math.hypot(x - fx, y - fy), 90);
+          ctx.fillStyle = rgba(col, (0.18 + 0.82 * n) * a);
+          ctx.beginPath(); ctx.arc(x, y, 1.1 + 2.4 * n * n, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      break;
+    }
+    case 'ripple': {
+      // Sonar: rings keep pulsing out from the finger
+      for (let i = 0; i < 4; i++) {
+        const r = ((t / 14) + i * 30) % 120;
+        ctx.strokeStyle = rgba(col, near(r, 120) * 0.8 * a);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(fx, fy, r, 0, Math.PI * 2); ctx.stroke();
+      }
+      break;
+    }
+    case 'glass':
+      break;
+    default: {
+      // Line rails: one rail per text line, spaced like the cursor steps; the rail under the
+      // finger is the current line, with a tick for every letter step along it
+      const lineH = 24, charW = 14;
+      const first = tp.day - Math.ceil((tp.day - KB.y) / lineH) * lineH;
+      let active = null, best = Infinity;
+      for (let y = first; y < KB.y + KB.h; y += lineH) {
+        const d = Math.abs(y - fy);
+        if (d < best) { best = d; active = y; }
+      }
+      for (let y = first; y < KB.y + KB.h; y += lineH) {
+        if (y < KB.y) continue;
+        const on = y === active;
+        ctx.strokeStyle = rgba(col, (on ? 0.95 : 0.16 + 0.3 * near(Math.abs(y - fy), 80)) * a);
+        ctx.lineWidth = on ? 2 : 1;
+        ctx.beginPath(); ctx.moveTo(KB.x + 8, y); ctx.lineTo(KB.x + KB.w - 8, y); ctx.stroke();
+      }
+      if (active !== null) {
+        const firstX = tp.dax - Math.ceil((tp.dax - KB.x) / charW) * charW;
+        for (let x = firstX; x < KB.x + KB.w; x += charW) {
+          const n = near(Math.abs(x - fx), 110);
+          if (n <= 0) continue;
+          ctx.strokeStyle = rgba(col, 0.85 * n * a);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x, active - 3 - 3 * n); ctx.lineTo(x, active + 3 + 3 * n); ctx.stroke();
+        }
+      }
+      break;
+    }
+  }
+  // Step pulses: a flash in the direction the cursor just moved
+  if (c.steps) {
+    tp.pulses = tp.pulses.filter((q) => t - q.t0 < 320);
+    for (const q of tp.pulses) {
+      const u = (t - q.t0) / 320, d = 10 + 26 * easeOut(u);
+      ctx.save();
+      ctx.translate(q.x + q.dx * d, q.y + q.dy * d);
+      ctx.rotate(Math.atan2(q.dy, q.dx));
+      ctx.strokeStyle = rgba(col, (1 - u) * L * s);
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(-4, -7); ctx.lineTo(3, 0); ctx.lineTo(-4, 7); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
 
 /* ---------- Accent popup: row or bloom arc ---------- */
 let popup = null;
@@ -2163,10 +3623,24 @@ function openPopup(k) {
   popupEl.innerHTML = '';
   popupEl.hidden = false;
   const items = [];
-  const n = chars.length, bloom = cfg.popup.style === 'bloom';
+  const n = chars.length, style = cfg.popup.style, bloom = style === 'bloom' || style === 'wheel';
   chars.forEach((ch, i) => {
     let x, y;
-    if (bloom) {
+    if (style === 'wheel') {
+      // A full circle around the key, starting at the top
+      const a = -Math.PI / 2 + (Math.PI * 2 * i) / n, r = Math.max(cfg.popup.radius, 22 * n / Math.PI);
+      x = clamp(k.cx + Math.cos(a) * r, 22, DW - 22);
+      y = clamp(k.cy + Math.sin(a) * r, 26, DH - 26);
+    } else if (style === 'column') {
+      // Stacked straight up from the key, nearest first
+      x = clamp(k.cx, 22, DW - 22);
+      y = Math.max(26, k.r.y - 26 - i * 40);
+    } else if (style === 'grid') {
+      // Two rows above the key
+      const cols = Math.ceil(n / 2), col = i % cols, row = Math.floor(i / cols), w = 42;
+      x = clamp(k.cx - ((cols - 1) * w) / 2, 24, DW - 24 - (cols - 1) * w) + col * w;
+      y = Math.max(26, k.r.y - 26 - (1 - row) * 42);
+    } else if (bloom) {
       // Fan out on an arc above the key, clamped inside the dock
       const span = Math.min(Math.PI * 0.95, 0.42 * n), a = -Math.PI / 2 - span / 2 + (n === 1 ? span / 2 : (span * i) / (n - 1));
       x = clamp(k.cx + Math.cos(a) * cfg.popup.radius, 22, DW - 22);
@@ -2215,6 +3689,7 @@ function inDown(x, y) {
   if (cfg.wave.on && k.row > 0) fxWave(k);
   if (cfg.ripple.on) fxRipple(x, y);
   if (cfg.sparks.on) fxSparks(x, y);
+  if (cfg.drop.on) fxDrop(k, x, y);
   if (LONG_KEYS(k)) {
     chargeStart(k, x);
     P.timer = setTimeout(() => onLongPress(k), cfg.ring.timeout);
@@ -2234,10 +3709,26 @@ function startDeleteRepeat(k) {
   P.mode = 'delhold';
   startHoldDelete(k);
   const t0 = now();
+  let singles = 0, lastWord = 0;
   const tick = () => {
     if (!P.active || P.mode !== 'delhold') return;
+    const c = cfg.delHold;
+    if (c.words && singles >= c.wordsAfter) {
+      // Word mode: a whole word at a steady pace, every letter of it flying in
+      if (now() - lastWord >= D(c.wordPace) && caret > 0) {
+        lastWord = now();
+        const n = wordSpan(text.slice(0, caret)), letters = lettersBefore(n).filter((l) => l.ch !== '·');
+        text = text.slice(0, caret - n) + text.slice(caret);
+        caret -= n;
+        renderField();
+        for (let i = letters.length - 1; i >= 0; i--) holdLetter(letters[i]);
+        typingSuggestions();
+      }
+      P.timer = setTimeout(tick, 30);
+      return;
+    }
     const letter = letterBeforeCaret();
-    if (deleteChar() !== null) holdLetter(letter);
+    if (deleteChar() !== null) { holdLetter(letter); singles++; }
     typingSuggestions();
     P.timer = setTimeout(tick, Math.max(35, 95 - (now() - t0) / 20));
   };
@@ -2263,8 +3754,8 @@ function inMove(x, y) {
   else if (P.mode === 'cursor') {
     trackpad.move(x, y);
     const dx = x - P.ax, dy = y - P.ay;
-    if (Math.abs(dy) >= 24 && Math.abs(dy) >= Math.abs(dx)) { const n = Math.trunc(dy / 24); for (let i = 0; i < Math.abs(n); i++) moveLine(Math.sign(n)); P.ay += n * 24; P.ax = x; }
-    else if (Math.abs(dx) >= 14) { const n = Math.trunc(dx / 14); moveCaret(n); P.ax += n * 14; P.ay = y; }
+    if (Math.abs(dy) >= 24 && Math.abs(dy) >= Math.abs(dx)) { const n = Math.trunc(dy / 24); for (let i = 0; i < Math.abs(n); i++) moveLine(Math.sign(n)); P.ay += n * 24; P.ax = x; trackpad.step(0, Math.sign(n)); }
+    else if (Math.abs(dx) >= 14) { const n = Math.trunc(dx / 14); moveCaret(n); P.ax += n * 14; P.ay = y; trackpad.step(Math.sign(n), 0); }
   } else if (P.mode === 'popup') popupMove(x, y);
 }
 
@@ -2311,6 +3802,15 @@ function commitTap(k, x) {
       if (cfg.enter.on) fxEnter(k);
       break;
     case 'del': {
+      // Right after a swiped word, backspace takes the whole word back, like FUTO
+      if (prevCommit && caret === prevCommit.end && prevCommit.end - prevCommit.start > 1) {
+        const letters = lettersBefore(prevCommit.end - prevCommit.start).filter((l) => l.ch !== '·');
+        text = text.slice(0, prevCommit.start) + text.slice(caret);
+        caret = prevCommit.start;
+        renderField();
+        if (cfg.del.on) fxDelTap(k, letters);
+        break;
+      }
       const letter = letterBeforeCaret();
       deleteChar();
       if (cfg.del.on) fxDelTap(k, letter);
@@ -2323,6 +3823,7 @@ function commitTap(k, x) {
     default: return;
   }
   if (cfg.heat.on) heat.add(cfg.heat.build);
+  if (cfg.heat.on && cfg.heat.combo) combo.hit(1);
   typingSuggestions();
 }
 
@@ -2346,12 +3847,14 @@ function startSwipe() {
 /** Every key the finger crosses: trace and heat. */
 function crossKey(k, i) {
   if (cfg.trace.on) fxTrace(k, i);
+  if (cfg.grow.on) growKey(k);
   if (cfg.heat.on && cfg.heat.swipe) heat.add(cfg.heat.build * 0.6);
 }
 /** Only the picked letters: letter hop and constellation. */
 function pickKey(k) {
   if (!isLetter(k) || P.picked[P.picked.length - 1] === k) return;
   P.picked.push(k);
+  trail.picks.push({ x: k.cx, y: k.cy, t: now() });
   hopAdd(k);
   if (cons) cons.pts.push({ x: k.cx, y: k.cy, t0: now() });
 }
@@ -2444,6 +3947,7 @@ function finishSwipe() {
   lastCommit = { start, end: caret };
   setSuggestions(words.length ? words : [w], w.length);
   hopFinish(w);
+  if (cfg.heat.on && cfg.heat.combo) combo.hit(collapse(w).length);
   if (cons) { cons.state = 'fold'; cons.foldAt = now(); cons = null; }
   if (cfg.burst.on) fxBurst();
   kick();
@@ -2503,6 +4007,44 @@ function playShow() {
       row.animate([{ transform: `translateY(${h * 0.9}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
         { duration: D(c.duration), delay: D((ROW_EL.length - 1 - i) * c.stagger), easing: ease, fill: 'backwards' });
     });
+  } else if (c.mode === 'piano') {
+    // Keys drop in one by one, left to right across the board, each landing with a little bounce
+    for (const k of KEYS) {
+      const order = (k.cx - KB.x) / KB.w;
+      k.el.animate([{ transform: 'translateY(-46px)', opacity: 0 }, { transform: 'translateY(4px)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }],
+        { duration: D(c.duration), delay: D(order * c.stagger * 9 + k.row * c.stagger * 0.6), easing: 'ease-in', fill: 'backwards' });
+    }
+  } else if (c.mode === 'flap') {
+    // Split flap: each label flips through a few characters, with the top half folding down each time
+    const glyphs = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+    const keys = KEYS.filter((k) => k.t === 'char' || k.t === 'num');
+    for (const k of KEYS) k.el.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: D(c.duration), fill: 'backwards' });
+    for (const k of keys) {
+      const flips = 3 + Math.floor(rand(0, 4)), start = D(((k.cx - KB.x) / KB.w) * c.stagger * 6 + k.row * c.stagger * 0.8), each = D(70);
+      for (let f = 0; f <= flips; f++) {
+        setTimeout(() => {
+          if (!kbOpen) return;
+          k.lab.textContent = f === flips ? (k.t === 'num' || /[,.]/.test(k.c) ? k.c : (shifted() ? k.c.toUpperCase() : k.c)) : glyphs[Math.floor(Math.random() * glyphs.length)];
+          k.lab.animate([{ transform: 'scaleY(0.15)', filter: 'brightness(0.6)' }, { transform: 'none', filter: 'none' }], { duration: each * 0.9, easing: 'ease-out' });
+        }, start + f * each);
+      }
+    }
+  } else if (c.mode === 'decode') {
+    // Labels scramble through random characters, then settle left to right into the real ones
+    const glyphs = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#$%&@*+=?';
+    const t0 = now(), keys = KEYS.filter((k) => k.t === 'char' || k.t === 'num');
+    for (const k of KEYS) k.el.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: D(c.duration), fill: 'backwards' });
+    const settle = (k) => D(c.duration * 0.6 + ((k.cx - KB.x) / KB.w) * c.stagger * 10 + k.row * c.stagger);
+    const tick = () => {
+      const e = now() - t0;
+      let busy = false;
+      for (const k of keys) {
+        if (e < settle(k)) { busy = true; k.lab.textContent = glyphs[Math.floor(Math.random() * glyphs.length)]; }
+      }
+      if (busy && kbOpen) setTimeout(tick, 45);
+      else { for (const k of keys) if (k.t === 'num' || /[,.]/.test(k.c)) k.lab.textContent = k.c; updateShiftUI(); }
+    };
+    tick();
   } else if (c.mode === 'bloom') {
     const cx = KB.x + KB.w / 2, cy = KB.y + KB.h / 2;
     for (const k of KEYS) {
@@ -2519,11 +4061,38 @@ async function hideKeyboard() {
   if (P.active) inUp();
   fab.setAttribute('aria-pressed', 'false');
   fab.setAttribute('aria-label', 'Show test keyboard');
-  if (cfg.hide.mode === 'dip') {
+  const hc = cfg.hide, hd = D(hc.duration), st = D(hc.stagger);
+  let wait = 0;
+  if (hc.mode === 'dip') {
     ROW_EL.forEach((row, i) => hideAnims.push(row.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(14px)', opacity: 0 }],
-      { duration: D(cfg.hide.duration), delay: D(i * 18), easing: 'ease-in', fill: 'forwards' })));
-    await sleep(D(cfg.hide.duration) + D(90));
+      { duration: hd, delay: i * st, easing: 'ease-in', fill: 'forwards' })));
+    wait = hd + st * ROW_EL.length;
+  } else if (hc.mode === 'fold') {
+    // Rows fold down away from you, top row first
+    ROW_EL.forEach((row, i) => hideAnims.push(row.animate([{ transform: 'perspective(500px) rotateX(0deg)', opacity: 1 }, { transform: 'perspective(500px) rotateX(-85deg)', opacity: 0 }],
+      { duration: hd, delay: i * st, easing: 'ease-in', fill: 'forwards' })));
+    wait = hd + st * ROW_EL.length;
+  } else if (hc.mode === 'sink') {
+    hideAnims.push(kb.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(26px) scale(0.94)', opacity: 0 }], { duration: hd, easing: 'ease-in', fill: 'forwards' }));
+    wait = hd;
+  } else if (hc.mode === 'scatter') {
+    // Keys tumble off in a random order
+    for (const k of KEYS) {
+      hideAnims.push(k.el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${rand(-40, 40)}px, ${rand(70, 140)}px) rotate(${rand(-40, 40)}deg)`, opacity: 0 }],
+        { duration: hd, delay: rand(0, st * 6), easing: 'ease-in', fill: 'forwards' }));
+    }
+    wait = hd + st * 6;
+  } else if (hc.mode === 'shrink') {
+    // Bloom in reverse: the outer keys go first and everything shrinks toward the middle
+    const cx = KB.x + KB.w / 2, cy = KB.y + KB.h / 2, maxD = Math.hypot(KB.w / 2, KB.h * 0.7);
+    for (const k of KEYS) {
+      const d = Math.hypot(k.cx - cx, (k.cy - cy) * 1.4);
+      hideAnims.push(k.el.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${(cx - k.cx) * 0.3}px, ${(cy - k.cy) * 0.3}px) scale(0.2)`, opacity: 0 }],
+        { duration: hd, delay: (1 - d / maxD) * st * 6, easing: 'ease-in', fill: 'forwards' }));
+    }
+    wait = hd + st * 6;
   }
+  if (wait) await sleep(wait + D(60));
   dock.classList.remove('open');
   document.body.classList.remove('kb-open');
   await sleep(240);
@@ -2659,7 +4228,11 @@ async function playDemo(kind, alive) {
     case 'space': for (let i = 0; i < 3; i++) await tap(keyOf((k) => k.t === 'space'), 70, 450); break;
     case 'delTap': {
       await typeStr('slice and burn', 45);
-      for (let i = 0; i < 4 && alive(); i++) await tap(keyOf((k) => k.t === 'del'), 70, 700);
+      for (let i = 0; i < 3 && alive(); i++) await tap(keyOf((k) => k.t === 'del'), 70, 700);
+      // Then a swiped word, taken back whole by one press: every letter gets the effect
+      if (alive()) await tap(keyOf((k) => k.t === 'space'), 60, 200);
+      if (alive()) await swipeWord('world', 500, 'world');
+      if (alive()) await tap(keyOf((k) => k.t === 'del'), 70, 1300);
       break;
     }
     case 'delHold': {
@@ -2667,7 +4240,7 @@ async function playDemo(kind, alive) {
       const d = keyOf((k) => k.t === 'del');
       if (!alive()) break;
       inDown(d.cx, d.cy);
-      await sleep(3000);
+      await sleep(4200);
       if (alive()) inUp();
       await sleep(Math.min(2500, cfg.delHold.flight + 400));
       break;
@@ -2767,5 +4340,4 @@ renderField();
 typingSuggestions();
 </script>
 
-</body>
-</html>
+</body></html>

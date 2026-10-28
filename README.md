@@ -53,15 +53,15 @@ keyfx is a library, so it has no APK of its own. To try the effects on a phone, 
 
 | Group | Effects |
 |---|---|
-| Typing | Key pop (scaling the real key in hosts with `CAP_KEY_TRANSFORM`), letter float (rise, grow or ghost key), heat streak, neighbor wave, ripple, sparks |
-| Special keys | Enter sweep; spacebar stars, puff or shimmer; backspace fire, slash or shatter, with the deleted letters burning, splitting or shattering too |
-| Backspace hold | The key becomes a black hole, lava (shaking the real key in hosts with `CAP_KEY_TRANSFORM`), an opening box or a hole, and the deleted letters swirl in, fly on curves, or get one press each |
-| Swipe trail | Key trace, comet, ink brush, stardust |
-| Swipe word | Letter hop on the number row (or the top row), constellation, commit burst |
-| Long press | Hold charge, as a ring or a liquid fill |
-| Spacebar | Trackpad mode, with key labels fading out (hosts with `CAP_KEY_TRANSFORM`) |
-| Show and hide | Center bloom or row cascade on show, key by key in hosts with `CAP_KEY_TRANSFORM`; a dip on hide (hosts with `CAP_HIDE_ANIMATION`) |
-| Accent popup | Bloom arc layout (hosts with `CAP_POPUP_LAYOUT`) |
+| Typing | Key pop (scaling the real key in hosts with `CAP_KEY_TRANSFORM`), letter float (rise or ghost key), heat streak (glow, wave, progress bar, energizing circuit or rising embers, with an optional combo counter), neighbor wave (wave, orbit, firework or firecracker), ripple, sparks, water drop |
+| Special keys | Enter: sweep, shockwave, rocket, row wave or check mark. Spacebar: stars, puff or shimmer. Backspace tap: fire, slash, shatter, laser, disintegrate, rewind, glitch, shredder, swirl in or vacuum on curves, with the deleted letters reacting too |
+| Backspace hold | The key becomes a black hole, lava (shaking the real key in hosts with `CAP_KEY_TRANSFORM`), an opening box, a hole or a portal. The deleted letters swirl in, fly on curves, ride a tractor beam, or get one press each |
+| Swipe trail | Key trace, comet, ink brush, circuit trail, lightning, neon tube, arrow trail, water wake, stardust, and key grow (the keys swell as the swipe crosses them; hosts with `CAP_KEY_TRANSFORM`) |
+| Swipe word | Letter hop on the number row (or the top row): the letters gather by hop, drop and bounce, zip or spin, then join the suggestion, rise away, fly into the text, form the word, glow and fade or type out, while extra letters fall, burn, crumble, fly to backspace, shake off or shrink away. Also constellation and commit burst. A pick setting chooses which swiped letters count: where you turn, where you pause, or every key crossed |
+| Long press | Hold charge, as a liquid fill, ring, orbiting sparks, burning fuse or clock wipe |
+| Spacebar | Trackpad mode drawn as line rails, a dot field, a still grid, sonar or a spotlight, with optional pulses on each cursor step, warp streaks and arrows, and key labels fading out (hosts with `CAP_KEY_TRANSFORM`) |
+| Show and hide | Show: center bloom or row cascade, key by key in hosts with `CAP_KEY_TRANSFORM`, or piano, decode and split flap, which need `CAP_KEY_TRANSFORM`. Hide: dip, fold down, sink, scatter or shrink to center (hosts with `CAP_HIDE_ANIMATION`) |
+| Accent popup | Bloom arc, wheel, column, grid or row layout (hosts with `CAP_POPUP_LAYOUT`) |
 | Suggestion bar | Light up the predicted word (hosts with `CAP_SUGGESTION_STYLE`) |
 
 When one press removes a whole word (like undoing a swiped word), every letter in it gets the backspace effect, not only the last one.
@@ -117,12 +117,13 @@ fx.longPressStart(FxKey k, float x, long timeoutMs); fx.longPressEnd();
 fx.swipeStart(); fx.swipePoint(float x, float y, long t); fx.swipeEnd(); fx.swipeWord(String word); fx.swipeCancel();
 fx.swipeGuess(String word);             // live best guess during a swipe, for the word highlight
 fx.cursorMode(boolean on, float x, float y); fx.cursorMove(float x, float y);
+fx.cursorStep(int dx, int dy);          // trackpad: call on each real cursor move (dx characters, dy lines), for the step pulse
 fx.show(Bitmap snapshot, Runnable onDone);  // returns true if animating; host hides its view until onDone
 fx.hide(Bitmap snapshot, Runnable onDone);  // CAP_HIDE_ANIMATION hosts only
 
 // Hosts that draw more than the overlay
 fx.setHost(FxHost host);                // redrawKeys() and wordChanged() callbacks
-fx.look(FxKey k, KeyLook out);          // CAP_KEY_TRANSFORM: scale, move, fade this real key now
+fx.look(FxKey k, KeyLook out);          // CAP_KEY_TRANSFORM: scale, move, fade or relabel (KeyLook.label) this real key now
 fx.showNeedsSnapshot();                 // false: call show(null, onDone), keys animate through look()
 fx.word();                              // CAP_SUGGESTION_STYLE: the predicted word and lit letters
 fx.popupLayout(FxKey k, int n, RectF bounds, float[] outXY);  // CAP_POPUP_LAYOUT: bloom arc
@@ -135,16 +136,16 @@ KeyFx.capTitle(int cap); KeyFx.capReason(int cap);  // wording for settings scre
 1. **Attach.** Create a `KeyFx` and add it to an overlay that covers the keyboard window.
 2. **Layout.** Build an `FxLayout` of `FxKey`s in the Drawable's coordinates, with the keyboard and suggestion bar rectangles, and call `setLayout()` whenever the keyboard changes (new layout, rotation, symbols page).
 3. **Events.** Call the event methods from the points where your keyboard handles touches, typed keys, backspace and swipes.
-4. **Private fields.** When input starts, call `setPrivateField(KeyFx.isPrivateInput(editorInfo.inputType))`. In password fields, shown or hidden, keyfx then draws nothing, so no effect gives away what is typed. Check `isEnabled()` before reading the app's text for backspace effects, so nothing is read there either.
+4. **Private fields.** When input starts, call `setPrivateField(KeyFx.isPrivateInput(editorInfo.inputType))`. In password fields, shown or hidden, keyfx then draws nothing, so no effect gives away what is typed. Check `isEnabled()` before reading the app's text for backspace effects, so nothing is read there either. A choice value can need a capability too (`Field.valueRequires`); hosts without it don't offer that value, and a saved one reads as the default.
 5. **Capabilities.** Declare what your host can do beyond drawing on top, with the `KeyFx.CAP_*` flags. Settings and sections that need a missing flag are hidden from that host's settings screen.
 
    | Flag | Lets keyfx |
    |---|---|
-   | `CAP_KEY_TRANSFORM` | scale, shake and fade the real keys through `look()`: key pop, lava shake, trackpad label fade, key-by-key show |
+   | `CAP_KEY_TRANSFORM` | scale, shake, move, fade and relabel the real keys through `look()`: key pop, key grow trail, backspace glitch and lava shake, trackpad label fade, key-by-key show, and the show styles piano, decode and flap (those three are separate choice values gated with `Field.valueRequires`, and decode and flap swap in letters through `KeyLook.label`) |
    | `CAP_SUGGESTION_STYLE` | light up the predicted word in the suggestion bar through `word()` |
-   | `CAP_POPUP_LAYOUT` | lay out the accent popup as a bloom arc through `popupLayout()` and `popupLook()` |
+   | `CAP_POPUP_LAYOUT` | lay out the accent popup (bloom arc, wheel, column, grid, row) through `popupLayout()` and `popupLook()` |
    | `CAP_EXACT_WORD` | use the exact swiped word instead of a guess from committed text |
-   | `CAP_HIDE_ANIMATION` | play the hide dip |
+   | `CAP_HIDE_ANIMATION` | play the hide animation (all its styles) |
 
    Hosts with any of the first three also call `setHost()`, so keyfx can ask them to redraw.
 
