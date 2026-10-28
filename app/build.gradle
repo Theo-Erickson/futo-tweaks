@@ -31,6 +31,13 @@ android {
         }
     }
 
+    // Name APKs after the version, so builds are easy to tell apart
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "fx-for-futo-${variant.versionName}-${variant.buildType.name}.apk"
+        }
+    }
+
     buildTypes {
         release {
             // No minification: Xposed loads MainHook by name from assets/xposed_init
