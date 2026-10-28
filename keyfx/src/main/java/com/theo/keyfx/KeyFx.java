@@ -43,10 +43,15 @@ public final class KeyFx extends Drawable {
     public static final int CAP_EXACT_WORD = 8;
     /** The host can hold the keyboard on screen for a hide animation. */
     public static final int CAP_HIDE_ANIMATION = 16;
+    /**
+     * The host's backspace hold reads delHold.words, wordsAfter and wordPace and switches to
+     * deleting whole words. Hosts with their own setting for this leave it out.
+     */
+    public static final int CAP_WORD_DELETE = 32;
 
     /** Every capability, in the order settings screens list them. */
     public static final int[] CAPS = { CAP_KEY_TRANSFORM, CAP_SUGGESTION_STYLE, CAP_POPUP_LAYOUT, CAP_EXACT_WORD,
-            CAP_HIDE_ANIMATION };
+            CAP_HIDE_ANIMATION, CAP_WORD_DELETE };
 
     /** A short heading for what a capability covers, for settings screens. */
     public static String capTitle(int cap) {
@@ -56,6 +61,7 @@ public final class KeyFx extends Drawable {
             case CAP_POPUP_LAYOUT: return "The accent popup";
             case CAP_EXACT_WORD: return "The exact swiped word";
             case CAP_HIDE_ANIMATION: return "Keyboard hiding";
+            case CAP_WORD_DELETE: return "Deleting whole words";
             default: return "";
         }
     }
@@ -68,6 +74,7 @@ public final class KeyFx extends Drawable {
             case CAP_POPUP_LAYOUT: return "The keyboard lays out the accent popup itself, so effects can't rearrange it.";
             case CAP_EXACT_WORD: return "The swiped word is only guessed from the text that appears.";
             case CAP_HIDE_ANIMATION: return "The keyboard can't be held on screen while it slides away.";
+            case CAP_WORD_DELETE: return "This keyboard has its own setting for deleting whole words.";
             default: return "";
         }
     }
