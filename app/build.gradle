@@ -11,8 +11,8 @@ android {
         // Pixel 9 Pro and current LSPosed/Vector builds, no need to support older devices
         minSdk 30
         targetSdk 35
-        versionCode 4
-        versionName '1.2.1'
+        versionCode 6
+        versionName '1.3.0'
     }
 
     // Optional release signing: CI writes keystore.properties from repository secrets.

@@ -77,7 +77,7 @@ SHA-256: D6:26:CA:25:99:B1:13:EA:7E:11:6B:D4:E3:3F:F9:CA:89:5C:B7:88:2A:EF:42:1C
 ### Typing extras
 
 - **Vertical spacebar cursor:** drag the spacebar up or down to move the cursor between lines. Once a drag goes mostly vertical, the module takes it over and moves by line vertically and by character sideways. Short or sideways drags stay with FUTO, so its normal cursor drag, language swipe and long press keep working.
-- **Hold backspace for whole words:** after a few single letters (adjustable), a held backspace deletes a word at a time, at a pace you set. It deletes through FUTO's own backspace, so FUTO's word tracking stays correct.
+- **Hold backspace for whole words:** after a few single letters (adjustable), a held backspace deletes a word at a time, at a pace you set. It deletes through FUTO's own backspace, so FUTO's word tracking stays correct. Its settings are in the **Backspace hold** card.
 - **Hide the keyboard navigation bar:** removes the down arrow and keyboard switcher below the keys (Android 15 or newer).
 
 ### Effects
@@ -104,9 +104,10 @@ Open the module's settings from LSPosed or Vector, or from the FX for FUTO Keybo
 
 - **Changes apply right away**, even while the keyboard is open.
 - **Test field:** the box at the top stays in view, so you can type and swipe in it while you adjust settings.
+- **Preview:** each effect card has a Preview button that turns every other effect off for a moment and opens a text field, so you see that effect alone. Closing it, or leaving the screen, turns your effects back on as they were.
 - **Import:** paste an export from the lab to copy its settings over. Section and setting names match the lab's, and anything the module doesn't have is skipped.
 
-A few lab settings need changes inside FUTO itself: scaling and shaking the real keys, fading their labels, the key-by-key show animation, lighting up the predicted word, the bloom accent popup and the hide animation. A module can't make those safely, so they come with [FXboard](https://github.com/Theo-Erickson/fxboard). The settings screen lists them at the bottom, under **Needs FXboard**.
+A few lab settings need changes inside FUTO itself: scaling and shaking the real keys, fading their labels, the key-by-key show animation, lighting up the predicted word, the bloom accent popup, the hide animation, and the show styles that move the real keys (piano, decode and flap). A module can't make those safely, so they come with [FXboard](https://github.com/Theo-Erickson/fxboard). The settings screen lists them at the bottom, under **Needs FXboard**.
 
 ## Related projects
 

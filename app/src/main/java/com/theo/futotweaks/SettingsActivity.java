@@ -69,6 +69,13 @@ public class SettingsActivity extends Activity {
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     // Each section's field views, to show and hide them as their conditions change
     private final Map<String, List<Object[]>> mFieldViews = new HashMap<>();
+    // Each toggleable card's on/off switch, refreshed when a preview restores them
+    private final Map<String, Switch> mCardSwitches = new HashMap<>();
+    // True while switches are set from code, so their listeners don't save again
+    private boolean mSyncingSwitches;
+    private AlertDialog mPreviewDialog;
+    // Every section's on/off value from before a preview, as JSON, until it is restored
+    private static final String PREVIEW_BACKUP = "preview.backup";
     private static final String FXBOARD_URL = "https://github.com/Theo-Erickson/fxboard/releases";
 
     @Override
@@ -80,6 +87,9 @@ public class SettingsActivity extends Activity {
         mSections.add(Prefs.KEYBOARD_SECTION);
         mSections.addAll(KeyFx.schema());
         mSettings = new FxSettings(mPrefs, mSections);
+        migrateHoldWords();
+        // A preview left running when the app was killed: put the effects back first
+        restorePreview();
 
         final LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -169,7 +179,41 @@ public class SettingsActivity extends Activity {
         }
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Leaving the screen ends a preview: close it and put every effect back
+        if (mPreviewDialog != null && mPreviewDialog.isShowing()) {
+            mPreviewDialog.dismiss();
+            restorePreview();
+        }
+    }
+
     // region Saving
+
+    /**
+     * Whole-word deletion moved from the keyboard section to keyfx's Backspace hold card in 1.3.0.
+     * A value saved under the old keys is copied over once, when delHold.words isn't stored yet.
+     */
+    private void migrateHoldWords() {
+        final String oldOn = Prefs.key(Prefs.OLD_HOLD_WORDS);
+        final String newOn = FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS);
+        if (!mPrefs.contains(oldOn) || mPrefs.contains(newOn)) return;
+        final SharedPreferences.Editor ed = mPrefs.edit();
+        try {
+            ed.putBoolean(newOn, mPrefs.getBoolean(oldOn, true));
+            copyFloat(ed, Prefs.key(Prefs.OLD_WORDS_AFTER), FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS_AFTER));
+            copyFloat(ed, Prefs.key(Prefs.OLD_WORD_PACE), FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORD_PACE));
+        } catch (ClassCastException wrongType) {
+            // An unexpected stored type: keep keyfx's defaults
+        }
+        ed.remove(oldOn).remove(Prefs.key(Prefs.OLD_WORDS_AFTER)).remove(Prefs.key(Prefs.OLD_WORD_PACE));
+        save(ed, null);
+    }
+
+    private void copyFloat(final SharedPreferences.Editor ed, final String from, final String to) {
+        if (mPrefs.contains(from)) ed.putFloat(to, mPrefs.getFloat(from, 0f));
+    }
 
     /** Writes now and tells the keyboard. commit(), not apply(): the file must exist before the broadcast. */
     private void save(final SharedPreferences.Editor editor, final String sectionId) {
@@ -227,15 +271,24 @@ public class SettingsActivity extends Activity {
         if (s.description != null) titles.addView(text(s.description, 13, false));
         head.addView(titles, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         if (s.toggleable) {
+            // Preview: this effect alone, with a text field to try it in
+            head.addView(button("Preview", new View.OnClickListener() {
+                @Override
+                public void onClick(final View v) {
+                    startPreview(s);
+                }
+            }));
             final Switch sw = new Switch(this);
             sw.setChecked(mSettings.on(s.id));
             sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(final CompoundButton b, final boolean checked) {
+                    if (mSyncingSwitches) return;
                     save(mPrefs.edit().putBoolean(FxSettings.key(s.id, "on"), checked), s.id);
                 }
             });
             head.addView(sw);
+            mCardSwitches.put(s.id, sw);
         }
         card.addView(head);
 
@@ -309,6 +362,8 @@ public class SettingsActivity extends Activity {
                 group.setOrientation(LinearLayout.HORIZONTAL);
                 final String current = mSettings.s(s.id, f.key);
                 for (int i = 0; i < f.values.length; i++) {
+                    // Values this module can't show are listed in the Needs FXboard card instead
+                    if (f.valueMissing(i, Prefs.CAPS) != 0) continue;
                     final RadioButton rb = new RadioButton(this);
                     rb.setId(View.generateViewId());
                     rb.setText(f.names[i]);
@@ -348,11 +403,19 @@ public class SettingsActivity extends Activity {
             }
             for (final Field f : s.fields) {
                 final int fm = f.missing(Prefs.CAPS);
-                if (fm == 0) continue;
                 // A field that only shows under an unsupported parent is listed through the parent
                 final Field parent = f.showKey() != null ? mSettings.field(s.id, f.showKey()) : null;
                 if (parent != null && parent.missing(Prefs.CAPS) != 0) continue;
-                any |= addTo(byCap, fm, s.title + ": " + f.label);
+                if (fm != 0) {
+                    any |= addTo(byCap, fm, s.title + ": " + f.label);
+                    continue;
+                }
+                // A supported choice can still have values that need FXboard
+                if (f.type != Field.CHOICE || f.values == null) continue;
+                for (int i = 0; i < f.values.length; i++) {
+                    final int vm = f.valueMissing(i, Prefs.CAPS);
+                    if (vm != 0) any |= addTo(byCap, vm, s.title + ": " + f.names[i]);
+                }
             }
         }
         if (!any) return null;
@@ -410,6 +473,98 @@ public class SettingsActivity extends Activity {
         final String n = f.step >= 1 ? String.valueOf(Math.round(v))
                 : f.step >= 0.1f ? String.format(Locale.US, "%.1f", v) : String.format(Locale.US, "%.2f", v);
         return f.unit.isEmpty() ? n : n + " " + f.unit;
+    }
+
+    // endregion
+
+    // region Preview
+
+    /**
+     * Turns every toggleable effect off except s, after backing up their on/off values, and opens
+     * a dialog with a focused text field so the keyboard comes up showing only that effect.
+     */
+    private void startPreview(final Section s) {
+        restorePreview(); // never stack a second backup on a first
+        final JSONObject backup = new JSONObject();
+        final SharedPreferences.Editor ed = mPrefs.edit();
+        try {
+            for (final Section other : mSections) {
+                if (!other.toggleable) continue;
+                final String key = FxSettings.key(other.id, "on");
+                // Unset values are backed up as null, so the restore leaves them unset again
+                backup.put(key, mPrefs.contains(key) ? (Object) mPrefs.getBoolean(key, other.defaultOn) : JSONObject.NULL);
+                ed.putBoolean(key, other.id.equals(s.id));
+            }
+        } catch (Throwable t) {
+            Toast.makeText(this, "Couldn't start the preview: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            return;
+        }
+        ed.putString(PREVIEW_BACKUP, backup.toString());
+        save(ed, null);
+        syncCardSwitches();
+
+        final EditText input = new EditText(this);
+        input.setHint("Type or swipe here");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setMinLines(3);
+        input.setMaxLines(6);
+        final LinearLayout box = new LinearLayout(this);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        box.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Previewing: " + s.title)
+                .setMessage("Only this effect is on. Type or swipe below.")
+                .setView(box)
+                .setPositiveButton("Done", null)
+                .create();
+        // Done, back and a tap outside all end the preview the same way
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(final DialogInterface d) {
+                if (mPreviewDialog == dialog) mPreviewDialog = null;
+                restorePreview();
+            }
+        });
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+        mPreviewDialog = dialog;
+        dialog.show();
+        input.requestFocus();
+    }
+
+    /** Puts back the on/off values saved by a preview, if one is stored, and deletes the backup. */
+    private void restorePreview() {
+        final String json = mPrefs.getString(PREVIEW_BACKUP, null);
+        if (json == null) return;
+        final SharedPreferences.Editor ed = mPrefs.edit();
+        try {
+            final JSONObject backup = new JSONObject(json);
+            final java.util.Iterator<String> keys = backup.keys();
+            while (keys.hasNext()) {
+                final String key = keys.next();
+                if (backup.isNull(key)) ed.remove(key);
+                else ed.putBoolean(key, backup.optBoolean(key));
+            }
+        } catch (Throwable t) {
+            // A damaged backup can't be restored; drop it so it isn't tried again
+        }
+        ed.remove(PREVIEW_BACKUP);
+        save(ed, null);
+        syncCardSwitches();
+    }
+
+    /** Shows each card's stored on/off value without saving it again. */
+    private void syncCardSwitches() {
+        mSyncingSwitches = true;
+        try {
+            for (final Map.Entry<String, Switch> e : mCardSwitches.entrySet()) {
+                e.getValue().setChecked(mSettings.on(e.getKey()));
+            }
+        } finally {
+            mSyncingSwitches = false;
+        }
     }
 
     // endregion

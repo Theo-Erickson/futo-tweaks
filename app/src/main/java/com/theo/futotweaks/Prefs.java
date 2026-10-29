@@ -1,6 +1,7 @@
 package com.theo.futotweaks;
 
 import com.theo.keyfx.Field;
+import com.theo.keyfx.KeyFx;
 import com.theo.keyfx.Section;
 
 /**
@@ -24,26 +25,31 @@ public final class Prefs {
     /**
      * What this host can do beyond drawing over the keyboard (keyfx's CAP_* flags). The module
      * only draws on top, so popup layout, hide animations and the like are left to the fork.
+     * It does delete whole words on a held backspace, set through keyfx's Backspace hold card.
      */
-    public static final int CAPS = 0;
+    public static final int CAPS = KeyFx.CAP_WORD_DELETE;
+
+    // keyfx's settings for whole-word deletion (delHold.words, wordsAfter, wordPace)
+    public static final String DEL_HOLD = "delHold";
+    public static final String DEL_WORDS = "words";
+    public static final String DEL_WORDS_AFTER = "wordsAfter";
+    public static final String DEL_WORD_PACE = "wordPace";
 
     // The module's own keyboard features, stored like any other section: "keyboard.<key>"
     public static final String KEYBOARD = "keyboard";
     public static final String VERTICAL_CURSOR = "verticalCursor";
     public static final String CURSOR_HAPTICS = "cursorHaptics";
     public static final String HIDE_NAV_BAR = "hideNavBar";
-    public static final String HOLD_WORDS = "holdWords";
-    public static final String WORDS_AFTER = "wordsAfter";
-    public static final String WORD_PACE = "wordPace";
+    // Before 1.3.0 whole-word deletion lived here; these old keys are copied to delHold once
+    public static final String OLD_HOLD_WORDS = "holdWords";
+    public static final String OLD_WORDS_AFTER = "wordsAfter";
+    public static final String OLD_WORD_PACE = "wordPace";
 
-    public static final Section KEYBOARD_SECTION = new Section(KEYBOARD, "Keyboard", -10, "Cursor, backspace and navigation bar",
+    public static final Section KEYBOARD_SECTION = new Section(KEYBOARD, "Keyboard", -10, "Cursor and navigation bar",
             "Changes to how FUTO Keyboard itself behaves.", false, true,
             Field.toggle(VERTICAL_CURSOR, "Drag spacebar up and down to change lines", true),
             Field.toggle(CURSOR_HAPTICS, "Vibrate on each cursor step", true).when(VERTICAL_CURSOR, "true"),
-            Field.toggle(HIDE_NAV_BAR, "Hide keyboard navigation bar (Android 15+)", true),
-            Field.toggle(HOLD_WORDS, "Holding backspace deletes whole words", true),
-            Field.range(WORDS_AFTER, "Switch to words after", 1, 30, 1, "letters", 8).when(HOLD_WORDS, "true"),
-            Field.range(WORD_PACE, "Time per word", 80, 600, 10, "ms", 220).when(HOLD_WORDS, "true"));
+            Field.toggle(HIDE_NAV_BAR, "Hide keyboard navigation bar (Android 15+)", true));
 
     public static String key(String field) {
         return KEYBOARD + "." + field;

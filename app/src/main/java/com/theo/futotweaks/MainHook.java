@@ -23,6 +23,7 @@ import android.view.inputmethod.InputConnection;
 import com.theo.keyfx.FxKey;
 import com.theo.keyfx.FxLayout;
 import com.theo.keyfx.FxLetter;
+import com.theo.keyfx.FxSettings;
 import com.theo.keyfx.KeyFx;
 
 import java.lang.ref.WeakReference;
@@ -86,6 +87,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static boolean sVerticalCursor, sCursorHaptics, sHideNavBar, sHoldWords;
     private static int sWordsAfter = 8;
     private static long sWordPaceMs = 220;
+    // keyfx settings the hooks read themselves (whole-word deletion), over the same prefs
+    private static FxSettings sHostSettings;
     private static boolean sAnimationsOn = true;
     // A password field is being typed in: keyfx stays off and its text is never read
     private static boolean sPrivateField;
@@ -176,9 +179,21 @@ public class MainHook implements IXposedHookLoadPackage {
         sVerticalCursor = sPrefs.getBoolean(Prefs.key(Prefs.VERTICAL_CURSOR), true);
         sCursorHaptics = sPrefs.getBoolean(Prefs.key(Prefs.CURSOR_HAPTICS), true);
         sHideNavBar = sPrefs.getBoolean(Prefs.key(Prefs.HIDE_NAV_BAR), true);
-        sHoldWords = sPrefs.getBoolean(Prefs.key(Prefs.HOLD_WORDS), true);
-        sWordsAfter = Math.round(sPrefs.getFloat(Prefs.key(Prefs.WORDS_AFTER), 8));
-        sWordPaceMs = Math.round(sPrefs.getFloat(Prefs.key(Prefs.WORD_PACE), 220));
+        // Whole-word deletion is set in keyfx's Backspace hold card (delHold.*), read with its defaults
+        if (sHostSettings == null) {
+            sHostSettings = new FxSettings(sPrefs, KeyFx.schema(), Prefs.CAPS);
+        } else {
+            sHostSettings.reload();
+        }
+        sHoldWords = sHostSettings.b(Prefs.DEL_HOLD, Prefs.DEL_WORDS);
+        sWordsAfter = Math.round(sHostSettings.f(Prefs.DEL_HOLD, Prefs.DEL_WORDS_AFTER));
+        sWordPaceMs = Math.round(sHostSettings.f(Prefs.DEL_HOLD, Prefs.DEL_WORD_PACE));
+        // Until the settings screen migrates them, values saved by 1.2 still apply
+        if (!sPrefs.contains(FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS))) {
+            sHoldWords = sPrefs.getBoolean(Prefs.key(Prefs.OLD_HOLD_WORDS), sHoldWords);
+            sWordsAfter = Math.round(sPrefs.getFloat(Prefs.key(Prefs.OLD_WORDS_AFTER), sWordsAfter));
+            sWordPaceMs = Math.round(sPrefs.getFloat(Prefs.key(Prefs.OLD_WORD_PACE), sWordPaceMs));
+        }
     }
 
     /** FUTO's own long-press delay (user adjustable in its settings), read from fields only. */
@@ -718,6 +733,14 @@ public class MainHook implements IXposedHookLoadPackage {
         for (int i = 0; i < count; i++) {
             ime.sendDownUpKeyEvents(keyCode);
         }
+        // The cursor really moved: let stepping effects step once, in its direction
+        final KeyFx fx = sFx;
+        if (fx != null) {
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) fx.cursorStep(-1, 0);
+            else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) fx.cursorStep(1, 0);
+            else if (keyCode == KeyEvent.KEYCODE_DPAD_UP) fx.cursorStep(0, -1);
+            else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) fx.cursorStep(0, 1);
+        }
         if (sCursorHaptics) {
             view.performHapticFeedback(HapticFeedbackConstants.TEXT_HANDLE_MOVE);
         }
@@ -819,14 +842,20 @@ public class MainHook implements IXposedHookLoadPackage {
         hookAll(legacy, "onMovePointer", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(final MethodHookParam param) {
+                // FUTO moves the cursor by this many characters on each call (its sign is the direction)
+                final int steps = param.args.length > 0 && param.args[0] instanceof Integer
+                        ? (Integer) param.args[0] : 0;
                 onUi(new SafeRunnable() {
                     @Override
                     void safeRun() {
                         final KeyFx fx = sFx;
-                        if (fx == null || !sDrag.tracking || sDrag.cursorMode()) return;
-                        sDrag.futoCursor = true;
-                        endCharge(fx);
-                        fx.cursorMode(true, sDrag.downX + sOffX, sDrag.downY + sOffY);
+                        if (fx == null || !sDrag.tracking || sDrag.active) return;
+                        if (!sDrag.futoCursor) {
+                            sDrag.futoCursor = true;
+                            endCharge(fx);
+                            fx.cursorMode(true, sDrag.downX + sOffX, sDrag.downY + sOffY);
+                        }
+                        if (steps != 0) fx.cursorStep(steps < 0 ? -1 : 1, 0);
                     }
                 });
             }
