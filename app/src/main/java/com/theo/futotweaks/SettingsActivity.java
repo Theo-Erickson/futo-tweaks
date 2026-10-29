@@ -43,6 +43,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -86,7 +87,8 @@ public class SettingsActivity extends Activity {
         mSections = new ArrayList<>();
         mSections.add(Prefs.KEYBOARD_SECTION);
         mSections.addAll(KeyFx.schema());
-        mSettings = new FxSettings(mPrefs, mSections);
+        // With the module's caps, so FXboard-only choice values read as the default, as in the keyboard
+        mSettings = new FxSettings(mPrefs, mSections, Prefs.CAPS);
         migrateHoldWords();
         // A preview left running when the app was killed: put the effects back first
         restorePreview();
@@ -193,26 +195,37 @@ public class SettingsActivity extends Activity {
 
     /**
      * Whole-word deletion moved from the keyboard section to keyfx's Backspace hold card in 1.3.0.
-     * A value saved under the old keys is copied over once, when delHold.words isn't stored yet.
+     * Each value saved under an old key is copied over once, unless its new key is already stored,
+     * and then the old keys are removed.
      */
     private void migrateHoldWords() {
         final String oldOn = Prefs.key(Prefs.OLD_HOLD_WORDS);
-        final String newOn = FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS);
-        if (!mPrefs.contains(oldOn) || mPrefs.contains(newOn)) return;
+        final String oldAfter = Prefs.key(Prefs.OLD_WORDS_AFTER);
+        final String oldPace = Prefs.key(Prefs.OLD_WORD_PACE);
+        if (!mPrefs.contains(oldOn) && !mPrefs.contains(oldAfter) && !mPrefs.contains(oldPace)) return;
         final SharedPreferences.Editor ed = mPrefs.edit();
-        try {
-            ed.putBoolean(newOn, mPrefs.getBoolean(oldOn, true));
-            copyFloat(ed, Prefs.key(Prefs.OLD_WORDS_AFTER), FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS_AFTER));
-            copyFloat(ed, Prefs.key(Prefs.OLD_WORD_PACE), FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORD_PACE));
-        } catch (ClassCastException wrongType) {
-            // An unexpected stored type: keep keyfx's defaults
+        final String newOn = FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS);
+        if (mPrefs.contains(oldOn) && !mPrefs.contains(newOn)) {
+            try {
+                ed.putBoolean(newOn, mPrefs.getBoolean(oldOn, true));
+            } catch (ClassCastException wrongType) {
+                // An unexpected stored type: keep keyfx's default
+            }
         }
-        ed.remove(oldOn).remove(Prefs.key(Prefs.OLD_WORDS_AFTER)).remove(Prefs.key(Prefs.OLD_WORD_PACE));
+        copyFloat(ed, oldAfter, FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS_AFTER));
+        copyFloat(ed, oldPace, FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORD_PACE));
+        ed.remove(oldOn).remove(oldAfter).remove(oldPace);
         save(ed, null);
     }
 
+    /** Copies a stored float to a new key that isn't stored yet. */
     private void copyFloat(final SharedPreferences.Editor ed, final String from, final String to) {
-        if (mPrefs.contains(from)) ed.putFloat(to, mPrefs.getFloat(from, 0f));
+        if (!mPrefs.contains(from) || mPrefs.contains(to)) return;
+        try {
+            ed.putFloat(to, mPrefs.getFloat(from, 0f));
+        } catch (ClassCastException wrongType) {
+            // An unexpected stored type: keep keyfx's default
+        }
     }
 
     /** Writes now and tells the keyboard. commit(), not apply(): the file must exist before the broadcast. */
@@ -522,7 +535,8 @@ public class SettingsActivity extends Activity {
         dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(final DialogInterface d) {
-                if (mPreviewDialog == dialog) mPreviewDialog = null;
+                if (mPreviewDialog != dialog) return;
+                mPreviewDialog = null;
                 restorePreview();
             }
         });
@@ -541,7 +555,7 @@ public class SettingsActivity extends Activity {
         final SharedPreferences.Editor ed = mPrefs.edit();
         try {
             final JSONObject backup = new JSONObject(json);
-            final java.util.Iterator<String> keys = backup.keys();
+            final Iterator<String> keys = backup.keys();
             while (keys.hasNext()) {
                 final String key = keys.next();
                 if (backup.isNull(key)) ed.remove(key);
@@ -629,7 +643,8 @@ public class SettingsActivity extends Activity {
                         if (v == null) continue;
                         // Colors outside the presets still work, they just don't show as selected
                         boolean known = v.startsWith("#");
-                        for (String allowed : f.values) known |= allowed.equals(v);
+                        // Values that need FXboard are skipped, so the count only covers what applies
+                        for (String allowed : f.values) known |= allowed.equals(v) && f.valueSupportedBy(v, Prefs.CAPS);
                         if (!known) continue;
                         ed.putString(key, v);
                         count++;

@@ -188,12 +188,21 @@ public class MainHook implements IXposedHookLoadPackage {
         sHoldWords = sHostSettings.b(Prefs.DEL_HOLD, Prefs.DEL_WORDS);
         sWordsAfter = Math.round(sHostSettings.f(Prefs.DEL_HOLD, Prefs.DEL_WORDS_AFTER));
         sWordPaceMs = Math.round(sHostSettings.f(Prefs.DEL_HOLD, Prefs.DEL_WORD_PACE));
-        // Until the settings screen migrates them, values saved by 1.2 still apply
-        if (!sPrefs.contains(FxSettings.key(Prefs.DEL_HOLD, Prefs.DEL_WORDS))) {
+        // Until the settings screen migrates them, values saved by 1.2 still apply, key by key
+        if (useOld(Prefs.DEL_WORDS, Prefs.OLD_HOLD_WORDS)) {
             sHoldWords = sPrefs.getBoolean(Prefs.key(Prefs.OLD_HOLD_WORDS), sHoldWords);
+        }
+        if (useOld(Prefs.DEL_WORDS_AFTER, Prefs.OLD_WORDS_AFTER)) {
             sWordsAfter = Math.round(sPrefs.getFloat(Prefs.key(Prefs.OLD_WORDS_AFTER), sWordsAfter));
+        }
+        if (useOld(Prefs.DEL_WORD_PACE, Prefs.OLD_WORD_PACE)) {
             sWordPaceMs = Math.round(sPrefs.getFloat(Prefs.key(Prefs.OLD_WORD_PACE), sWordPaceMs));
         }
+    }
+
+    /** Whether an old keyboard.* value is stored and its delHold.* replacement isn't. */
+    private static boolean useOld(final String newField, final String oldField) {
+        return !sPrefs.contains(FxSettings.key(Prefs.DEL_HOLD, newField)) && sPrefs.contains(Prefs.key(oldField));
     }
 
     /** FUTO's own long-press delay (user adjustable in its settings), read from fields only. */
