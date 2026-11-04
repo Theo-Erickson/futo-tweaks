@@ -35,6 +35,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.theo.keyfx.Field;
+import com.theo.keyfx.Fx;
 import com.theo.keyfx.FxSettings;
 import com.theo.keyfx.KeyFx;
 import com.theo.keyfx.Section;
@@ -639,8 +640,10 @@ public class SettingsActivity extends Activity {
                         ed.putFloat(key, Math.max(f.min, Math.min(f.max, (float) v)));
                         count++;
                     } else {
-                        final String v = o.optString(f.key, null);
-                        if (v == null) continue;
+                        final String raw = o.optString(f.key, null);
+                        if (raw == null) continue;
+                        // Values older lab exports still use are converted to what replaced them
+                        final String v = Fx.migrate(key, raw);
                         // Colors outside the presets still work, they just don't show as selected
                         boolean known = v.startsWith("#");
                         // Values that need FXboard are skipped, so the count only covers what applies
