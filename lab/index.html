@@ -3159,7 +3159,7 @@ function exitLetter(h, l, t, s, c, cx, cy) {
       }
     }
   }
-  // A letter of the word; magnet and merge move together, the rest go in turn
+  // A letter of the word; join moves them together, the rest go in turn
   const together = c.word === 'join';
   const start = h.exitAt + D(c.mark ? 200 : 80) + (together ? 0 : l.order * D(c.word === 'type' ? 90 : 40)), e = t - start;
   if (e < 0) { glowText(l.g, l.x, l.y, 20, 1.08, s); return true; }

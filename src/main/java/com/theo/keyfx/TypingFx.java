@@ -620,7 +620,6 @@ final class TypingFx extends FxModule {
                         c.drawLine(q.cx() + cs * r * 0.45f, q.cy() + sn * r * 0.45f + fall,
                                 q.cx() + cs * r, q.cy() + sn * r + fall, sp);
                     }
-                    sp.setStrokeCap(Paint.Cap.BUTT);
                 }
                 return alive;
             }
