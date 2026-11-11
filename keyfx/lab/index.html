@@ -397,6 +397,22 @@ input[type="color"] { width: 44px; height: 30px; border: 1px solid var(--line); 
 @media (prefers-reduced-motion: reduce) {
   .page, #dock, .switch span, .switch span::after { transition: none; }
 }
+
+/* ---------- Showcase mode (?showcase): the keyboard alone, framed for recording ---------- */
+body.showcase { min-height: 100vh; overflow: hidden; background: radial-gradient(120% 75% at 50% 0%, #1D2536 0%, #0B0D12 62%); }
+body.showcase .page, body.showcase #kbFab, body.showcase .sim, body.showcase .strip-label, body.showcase #exportSheet { display: none !important; }
+#scStage { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+body.showcase #dock { position: relative; left: auto; bottom: auto; transform: none; transition: none; width: 400px; border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.07); }
+body.showcase .strip { padding-top: 10px; }
+body.showcase #field { margin-top: 0; height: 64px; font-size: 16px; }
+body.showcase #caret { animation: none; }
+/* Readmotion's touch dot, drawn as a faint ring like Android's "Show taps", so the effect under it shows */
+body.showcase #__rm_cursor { width: 34px !important; height: 34px !important; margin: -17px 0 0 -17px !important;
+  background: rgba(255, 255, 255, 0.14) !important; border: 2px solid rgba(255, 255, 255, 0.6) !important; box-shadow: none !important; }
+#scCap { text-align: center; color: #E8EAED; min-height: 58px; }
+#scCap .cat { display: block; font: 500 11px/1 var(--font-mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 9px; }
+#scCap .name { display: block; font: 600 25px/1.1 var(--font-display); letter-spacing: -0.01em; }
 </style>
 
 <button id="kbFab" type="button" aria-pressed="false" aria-label="Show test keyboard" title="Show test keyboard">
@@ -451,6 +467,20 @@ input[type="color"] { width: 44px; height: 30px; border: 1px solid var(--line); 
 <script>
 'use strict';
 
+/* Showcase mode (?showcase) shows the keyboard alone, with a caption, for recording README media
+   (keyfx's tools/readmotion). Recordings drive it through window.showcase, set up at the end. */
+const SHOWCASE = new URLSearchParams(location.search).has('showcase');
+if (SHOWCASE) {
+  // A seeded random, so every re-record draws the same sparks, shards and jitter
+  let seed = 7;
+  Math.random = () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /* ================================================================
    Settings model
    Values mirror the module's knobs, so an export can be dropped
@@ -499,7 +529,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 let cfg = clone(DEFAULTS);
 let notes = {};
 try {
-  const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+  const saved = SHOWCASE ? null : JSON.parse(localStorage.getItem(STORE) || 'null');
   if (saved && saved.cfg) {
     for (const k in saved.cfg) if (cfg[k]) Object.assign(cfg[k], saved.cfg[k]);
     notes = saved.notes || {};
@@ -521,6 +551,7 @@ if ('exit' in cfg.hop) {
   delete cfg.hop.exit;
 }
 function save() {
+  if (SHOWCASE) return;
   try { localStorage.setItem(STORE, JSON.stringify({ cfg: userCfg(), notes })); } catch (e) { /* not persisted */ }
 }
 /* While a preview runs, every other effect is switched off in cfg; isolated holds the user's own on/off values. */
@@ -1003,6 +1034,7 @@ function buildKeyboard() {
       const el = document.createElement('div');
       el.className = 'key' + (['shift', 'del', 'enter', 'sym'].includes(d.t) ? ' mod' : '') + (d.t === 'space' ? ' space' : '') + (d.t === 'shift' ? ' shift' : '');
       el.style.flexGrow = d.w || 1;
+      el.dataset.key = d.c || d.t; // [data-key="h"], [data-key="del"]: for scripted recordings
       const lab = document.createElement('span');
       lab.className = 'lab';
       lab.textContent = d.label || d.c;
@@ -4338,6 +4370,63 @@ buildSettings();
 applyGlobal();
 renderField();
 typingSuggestions();
+
+/* ================================================================
+   Showcase mode
+   ================================================================ */
+if (SHOWCASE) {
+  document.body.classList.add('showcase');
+  const stage = document.createElement('div'), cap = document.createElement('div');
+  stage.id = 'scStage';
+  cap.id = 'scCap';
+  cap.innerHTML = '<span class="cat"></span><span class="name"></span>';
+  stage.append(cap, dock);
+  document.body.append(stage);
+  // Key pops and shakes use the Web Animations API, which runs on real time. Drive them from
+  // page time instead, so a recording with a paused clock sees them play at the right speed.
+  const anims = new Set(), nativeAnimate = Element.prototype.animate;
+  Element.prototype.animate = function (...args) {
+    const an = nativeAnimate.apply(this, args);
+    an.pause();
+    anims.add({ an, t0: now() });
+    return an;
+  };
+  (function drive() {
+    const t = now();
+    for (const a of anims) {
+      if (a.an.playState === 'idle') { anims.delete(a); continue; } // cancelled
+      const end = a.an.effect.getComputedTiming().endTime;
+      if (t - a.t0 >= end) { anims.delete(a); a.an.finish(); } else a.an.currentTime = t - a.t0;
+    }
+    requestAnimationFrame(drive);
+  })();
+  const merge = (patch) => { for (const id in patch) Object.assign(cfg[id], patch[id]); applyGlobal(); };
+  window.showcase = {
+    /** Every effect off, then just these on with these values: showcase.only({ del: { tap: 'fire' } }) */
+    only(patch = {}) {
+      for (const id in cfg) if ('on' in cfg[id]) cfg[id].on = false;
+      for (const id in patch) if ('on' in cfg[id]) cfg[id].on = true;
+      merge(patch);
+    },
+    /** Change values without switching anything else off */
+    set: merge,
+    /** Back to keyfx's defaults */
+    defaults() { cfg = clone(DEFAULTS); applyGlobal(); },
+    /** The caption above the keyboard: a small category line and the effect's name */
+    caption(cat, name) {
+      cap.querySelector('.cat').textContent = cat || '';
+      cap.querySelector('.name').textContent = name || '';
+      cap.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'ease-out' });
+    },
+    /** The word the next swipe means, as the lab's own demos pass it: the lab's decoder is a small
+        stand-in for a real keyboard's, and can read a quick swipe of 'world' as 'would'. null clears it. */
+    expect(word) { P.forcedWord = word; },
+    /** Replace the test field's text, with the caret at the end */
+    text(s) { text = s; caret = s.length; renderField(); typingSuggestions(); },
+  };
+  showcase.text('');
+  showKeyboard();
+}
 </script>
 
 </body></html>

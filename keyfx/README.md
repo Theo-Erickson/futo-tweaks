@@ -1,14 +1,27 @@
+<p align="center">
+  <img src=".github/readme/banner.gif" alt="keyfx: effects for Android keyboards" width="100%">
+</p>
+
 # keyfx
 
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support%20keyfx-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/theoerickson)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+<table>
+<tr>
+<td width="46%"><img src=".github/readme/hero.gif" alt="keyfx effects while typing, swiping and deleting" width="100%"></td>
+<td>
+
 **An effects library for Android keyboards.** Key pops, floating letters, backspace fire and black holes, swipe trails, letter hop, hold charge, a spacebar trackpad and show and hide animations, all drawn by one `Drawable` that any keyboard can host.
+
+Every clip here is recorded in the [keyfx lab](https://theo-erickson.github.io/keyfx/). Open it to try them yourself.
+
+</td>
+</tr>
+</table>
 
 > [!NOTE]
 > keyfx, FX for FUTO Keyboard and FXboard are independent, unofficial projects by Theo Erickson. They are not made, endorsed or supported by FUTO.
-
-<!-- Media: a short GIF of a few effects in action goes here, e.g. <img src="docs/media/hero.gif" width="360" alt="keyfx effects while typing"> -->
 
 keyfx is the engine behind [FX for FUTO Keyboard](https://github.com/Theo-Erickson/futo-tweaks), and runs inside [FXboard](https://github.com/Theo-Erickson/fxboard), which draws its real keys through keyfx and gets FUTO's exact swiped word. A few effects (the suggestion bar highlight, bloom popup and hide animation) are still to come there.
 
@@ -17,6 +30,7 @@ keyfx is the engine behind [FX for FUTO Keyboard](https://github.com/Theo-Ericks
 - [Summary](#summary)
 - [Downloads](#downloads)
 - [The effects](#the-effects)
+- [See it in action](#see-it-in-action)
 - [Related projects](#related-projects)
 - [The lab](#the-lab)
 - [How it works](#how-it-works)
@@ -47,7 +61,7 @@ keyfx is a library, so it has no APK of its own. To try the effects on a phone, 
 | Install a standalone keyboard with effects built in (no root; a few effects are still to come) | [FXboard releases](https://github.com/Theo-Erickson/fxboard/releases) |
 | Try the effects in a browser and design my own settings | [Open the lab](https://theo-erickson.github.io/keyfx/) (runs in any browser, phone included) |
 | Use keyfx in my own keyboard | [Adding keyfx to a project](#adding-keyfx-to-a-project) |
-| Get the source | [Download ZIP](https://github.com/Theo-Erickson/keyfx/archive/refs/heads/main.zip) or `git clone https://github.com/Theo-Erickson/keyfx.git` |
+| Get the source | [keyfx releases](https://github.com/Theo-Erickson/keyfx/releases) (a source zip per version) or `git clone https://github.com/Theo-Erickson/keyfx.git` |
 
 ## The effects
 
@@ -66,6 +80,28 @@ keyfx is a library, so it has no APK of its own. To try the effects on a phone, 
 
 When one press removes a whole word (like undoing a swiped word), every letter in it gets the backspace effect, not only the last one.
 
+## See it in action
+
+Recorded in the [keyfx lab](https://theo-erickson.github.io/keyfx/), the browser version of these effects, with the same settings. Each clip runs through a few of the effects in its group.
+
+<table>
+<tr>
+<td align="center"><img src=".github/readme/clip_typing.gif" width="360" alt="Typing: key pop, letter float, heat streak, neighbor wave, sparks"><br><b>Typing</b>: key pop, letter float, heat streak, neighbor wave, sparks</td>
+<td align="center"><img src=".github/readme/clip_delete.gif" width="360" alt="Backspace tap: fire, shatter, laser, disintegrate, glitch"><br><b>Backspace tap</b>: fire, shatter, laser, disintegrate, glitch</td>
+</tr>
+<tr>
+<td align="center"><img src=".github/readme/clip_hold.gif" width="360" alt="Backspace hold: black hole, portal, lava rumble"><br><b>Backspace hold</b>: black hole, portal, lava rumble</td>
+<td align="center"><img src=".github/readme/clip_enter.gif" width="360" alt="Enter: rocket, shockwave, check mark, row wave"><br><b>Enter</b>: rocket, shockwave, check mark, row wave</td>
+</tr>
+<tr>
+<td align="center"><img src=".github/readme/clip_spacebar.gif" width="360" alt="Spacebar: stars, puff and shimmer, then drag it as a trackpad"><br><b>Spacebar</b>: stars, puff and shimmer, then drag it as a trackpad</td>
+<td align="center"><img src=".github/readme/clip_trail.gif" width="360" alt="Swipe trail: comet, lightning, neon tube, ink brush, circuit"><br><b>Swipe trail</b>: comet, lightning, neon tube, ink brush, circuit</td>
+</tr>
+<tr>
+<td align="center"><img src=".github/readme/clip_word.gif" width="360" alt="Swiped word: letter hop three ways, and constellation"><br><b>Swiped word</b>: letter hop three ways, and constellation</td>
+</tr>
+</table>
+
 ## Related projects
 
 | Project | What it is | Who it's for | License |
@@ -80,6 +116,20 @@ When one press removes a whole word (like undoing a swiped word), every letter i
 The effects were designed in the lab, a mock keyboard in a single HTML file with a slider and a live preview for every setting. **[Open the lab](https://theo-erickson.github.io/keyfx/)** in any desktop or phone browser, or download [`lab/index.html`](lab/index.html) to use it offline.
 
 The lab's section ids and setting keys match keyfx's schema exactly. Press **Export settings** in the lab, then paste the result into a host's **Import** box (FX for FUTO Keyboard and FXboard both have one) to copy your design to your phone. Anything the host doesn't support is skipped.
+
+### Showcase mode and the README media
+
+`lab/index.html?showcase` shows the keyboard alone, with a caption, for recording. It runs on keyfx's defaults and ignores saved settings, and recordings drive it through `window.showcase` (`only`, `set`, `defaults`, `caption`, `text`, `expect`).
+
+The GIFs above are recorded from it with Readmotion, from `tools/readmotion/`. `showcase.py` there holds the effect gallery that FXboard and FX for FUTO Keyboard show too. To record them again:
+
+```
+python tools/readmotion/scenes.py
+readmotion-cli capture tools/readmotion/readmotion.json
+readmotion-cli build tools/readmotion/readmotion.json
+```
+
+`scenes.py` writes the recordings into the config, so edit it rather than the steps in the JSON. `build` also writes full-size MP4s of every clip to `tools/readmotion/.work/full/`.
 
 ## How it works
 
