@@ -1,0 +1,72 @@
+# Tests keyfx on every push and pull request. Pushes to main also publish a release with a
+# source zip, since keyfx is a library and has no APK of its own.
+# The lab is published separately by lab-pages.yml.
+
+name: Test and release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed to create releases
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # The runner image ships an Android SDK; compile against its newest android.jar too
+      - name: Run tests
+        run: |
+          ANDROID_JAR="$(ls -d "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -1)"
+          echo "Using $ANDROID_JAR"
+          # test.sh is committed from Windows without the executable bit
+          ANDROID_JAR="$ANDROID_JAR" bash test.sh
+
+  release:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Only what a host needs: the library, its tests, the lab and the license files.
+      # README media and recording tools stay out.
+      - name: Make source zip
+        run: |
+          NAME="keyfx-r${{ github.run_number }}"
+          mkdir -p out
+          git archive --format=zip --prefix="$NAME/" -o "out/$NAME-source.zip" HEAD \
+            src lab LICENSE NOTICE README.md test.sh
+          unzip -l "out/$NAME-source.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: keyfx-r${{ github.run_number }}-source
+          path: out/*.zip
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: r${{ github.run_number }}
+          name: keyfx r${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            Source of the keyfx library, built from ${{ github.sha }}.
+            keyfx is a library with no APK of its own. To try it on a phone, install
+            [FX for FUTO Keyboard](https://github.com/Theo-Erickson/futo-tweaks/releases) or
+            [FXboard](https://github.com/Theo-Erickson/fxboard/releases).
+          files: out/*.zip

@@ -1,0 +1,898 @@
+{
+  "tool_version": "2.3",
+  "fps": 30,
+  "out": "../../.github/readme",
+  "work": ".work",
+  "full_size": true,
+  "recordings": {
+    "hero": {
+      "source": "web",
+      "serve": "../..",
+      "path": "lab/index.html?showcase",
+      "size": [
+        440,
+        560
+      ],
+      "scale": 2,
+      "settle": 1.2,
+      "steps": [
+        {
+          "mark": "hero"
+        },
+        {
+          "eval": "showcase.defaults(); showcase.text(\"\"); showcase.caption(\"keyfx\", \"Every key, animated\")"
+        },
+        {
+          "click": "[data-key=\"h\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"l\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"l\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"o\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.3
+        },
+        {
+          "eval": "showcase.caption(\"keyfx\", \"Swipe trails and letter hop\")"
+        },
+        {
+          "eval": "showcase.expect(\"world\")"
+        },
+        {
+          "path": [
+            "[data-key=\"w\"]",
+            "[data-key=\"o\"]",
+            "[data-key=\"r\"]",
+            "[data-key=\"l\"]",
+            "[data-key=\"d\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 1.4
+        },
+        {
+          "eval": "showcase.caption(\"keyfx\", \"Backspace sets letters on fire\")"
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.3
+        },
+        {
+          "record": 0.5
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.7
+        },
+        {
+          "eval": "showcase.text(\"hello world, watch these go\"); showcase.caption(\"keyfx\", \"Hold it for a black hole\")"
+        },
+        {
+          "hold": "[data-key=\"del\"]",
+          "for": 1.7,
+          "move": 0.3
+        },
+        {
+          "record": 1.0
+        },
+        {
+          "eval": "showcase.set({\"enter\": {\"style\": \"rocket\"}}); showcase.caption(\"keyfx\", \"And enter launches a rocket\")"
+        },
+        {
+          "click": "[data-key=\"s\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"h\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"i\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"p\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"i\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"t\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"enter\"]",
+          "move": 0.2
+        },
+        {
+          "record": 1.3
+        },
+        {
+          "mark": "end"
+        },
+        {
+          "record": 0.1
+        }
+      ]
+    },
+    "gallery": {
+      "source": "web",
+      "serve": "../..",
+      "path": "lab/index.html?showcase",
+      "size": [
+        440,
+        560
+      ],
+      "scale": 2,
+      "settle": 1.2,
+      "steps": [
+        {
+          "mark": "typing"
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"float\": {\"mode\": \"rise\"}}); showcase.text(\"\"); showcase.caption(\"Typing\", \"Key pop and letter float\")"
+        },
+        {
+          "click": "[data-key=\"h\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"y\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"t\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"h\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"r\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"heat\": {\"style\": \"embers\", \"combo\": true, \"showAt\": 5}}); showcase.text(\"\"); showcase.caption(\"Typing\", \"Heat streak: embers\")"
+        },
+        {
+          "click": "[data-key=\"t\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"y\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"p\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"f\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"a\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"s\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"t\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.05
+        },
+        {
+          "click": "[data-key=\"r\"]",
+          "move": 0.05
+        },
+        {
+          "record": 0.9
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"wave\": {\"style\": \"firework\"}}); showcase.text(\"\"); showcase.caption(\"Typing\", \"Neighbor wave: firework\")"
+        },
+        {
+          "click": "[data-key=\"w\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"o\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"w\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"n\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"i\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"c\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"sparks\": {}, \"drop\": {}}); showcase.text(\"\"); showcase.caption(\"Typing\", \"Sparks and a water drop\")"
+        },
+        {
+          "click": "[data-key=\"y\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"e\"]",
+          "move": 0.1
+        },
+        {
+          "click": "[data-key=\"s\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.9
+        },
+        {
+          "mark": "delete"
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"del\": {\"tap\": \"fire\"}}); showcase.text(\"light it up\"); showcase.caption(\"Backspace tap\", \"Fire\")"
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.35
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"del\": {\"tap\": \"shatter\"}}); showcase.text(\"smash it\"); showcase.caption(\"Backspace tap\", \"Shatter\")"
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.2
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"del\": {\"tap\": \"laser\"}}); showcase.text(\"zap them\"); showcase.caption(\"Backspace tap\", \"Laser\")"
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.2
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"del\": {\"tap\": \"dust\"}}); showcase.text(\"dust off\"); showcase.caption(\"Backspace tap\", \"Disintegrate\")"
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.2
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.1
+        },
+        {
+          "record": 1.0
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"del\": {\"tap\": \"glitch\"}}); showcase.text(\"glitch\"); showcase.caption(\"Backspace tap\", \"Glitch\")"
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.2
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "click": "[data-key=\"del\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "mark": "hold"
+        },
+        {
+          "eval": "showcase.only({\"delHold\": {\"button\": \"blackhole\", \"letters\": \"swirl\"}}); showcase.text(\"watch these letters get pulled in\"); showcase.caption(\"Backspace hold\", \"Black hole, letters swirl in\")"
+        },
+        {
+          "hold": "[data-key=\"del\"]",
+          "for": 1.9,
+          "move": 0.3
+        },
+        {
+          "record": 1.1
+        },
+        {
+          "eval": "showcase.only({\"delHold\": {\"button\": \"portal\", \"letters\": \"beam\"}}); showcase.text(\"beam the whole line away\"); showcase.caption(\"Backspace hold\", \"Portal, on a tractor beam\")"
+        },
+        {
+          "hold": "[data-key=\"del\"]",
+          "for": 1.9,
+          "move": 0.3
+        },
+        {
+          "record": 1.1
+        },
+        {
+          "eval": "showcase.only({\"delHold\": {\"button\": \"lava\", \"letters\": \"vacuum\"}}); showcase.text(\"melt every word of this\"); showcase.caption(\"Backspace hold\", \"Lava rumble, letters on curves\")"
+        },
+        {
+          "hold": "[data-key=\"del\"]",
+          "for": 1.9,
+          "move": 0.3
+        },
+        {
+          "record": 1.1
+        },
+        {
+          "mark": "enter"
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"enter\": {\"style\": \"rocket\"}}); showcase.text(\"launch it\"); showcase.caption(\"Enter\", \"Rocket\")"
+        },
+        {
+          "click": "[data-key=\"enter\"]",
+          "move": 0.3
+        },
+        {
+          "record": 1.1
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"enter\": {\"style\": \"shockwave\"}}); showcase.text(\"send it\"); showcase.caption(\"Enter\", \"Shockwave\")"
+        },
+        {
+          "click": "[data-key=\"enter\"]",
+          "move": 0.2
+        },
+        {
+          "record": 1.0
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"enter\": {\"style\": \"check\"}}); showcase.text(\"all done\"); showcase.caption(\"Enter\", \"Check mark\")"
+        },
+        {
+          "click": "[data-key=\"enter\"]",
+          "move": 0.2
+        },
+        {
+          "record": 1.0
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"enter\": {\"style\": \"rows\"}}); showcase.text(\"next line\"); showcase.caption(\"Enter\", \"Row wave\")"
+        },
+        {
+          "click": "[data-key=\"enter\"]",
+          "move": 0.2
+        },
+        {
+          "record": 1.1
+        },
+        {
+          "mark": "spacebar"
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"space\": {\"mode\": \"stars\"}}); showcase.text(\"tap\"); showcase.caption(\"Spacebar\", \"Stars\")"
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.3
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"space\": {\"mode\": \"puff\"}}); showcase.caption(\"Spacebar\", \"Puff\")"
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "eval": "showcase.only({\"pop\": {}, \"space\": {\"mode\": \"shimmer\"}}); showcase.caption(\"Spacebar\", \"Shimmer\")"
+        },
+        {
+          "click": "[data-key=\"space\"]",
+          "move": 0.1
+        },
+        {
+          "record": 0.8
+        },
+        {
+          "eval": "showcase.only({\"trackpad\": {\"look\": \"rails\"}}); showcase.text(\"drag the spacebar to move the cursor,\\nup and down between lines too\"); showcase.caption(\"Spacebar swipe\", \"Trackpad: rails\")"
+        },
+        {
+          "path": [
+            [
+              220,
+              477
+            ],
+            [
+              110,
+              477
+            ],
+            [
+              110,
+              427
+            ],
+            [
+              260,
+              427
+            ],
+            [
+              260,
+              477
+            ]
+          ],
+          "over": 2.4,
+          "pause": 0.25,
+          "move": 0.3
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "eval": "showcase.only({\"trackpad\": {\"look\": \"glass\"}}); showcase.caption(\"Spacebar swipe\", \"Trackpad: glass\")"
+        },
+        {
+          "path": [
+            [
+              220,
+              477
+            ],
+            [
+              310,
+              477
+            ],
+            [
+              310,
+              427
+            ],
+            [
+              160,
+              427
+            ]
+          ],
+          "over": 1.8,
+          "pause": 0.25,
+          "move": 0.3
+        },
+        {
+          "record": 0.6
+        },
+        {
+          "mark": "trail"
+        },
+        {
+          "eval": "showcase.only({\"comet\": {}}); showcase.text(\"\"); showcase.caption(\"Swipe trail\", \"Comet\")"
+        },
+        {
+          "eval": "showcase.expect(\"hello\")"
+        },
+        {
+          "path": [
+            "[data-key=\"h\"]",
+            "[data-key=\"e\"]",
+            "[data-key=\"l\"]",
+            "[data-key=\"o\"]"
+          ],
+          "over": 0.48,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 0.7
+        },
+        {
+          "eval": "showcase.only({\"lightning\": {}}); showcase.caption(\"Swipe trail\", \"Lightning\")"
+        },
+        {
+          "eval": "showcase.expect(\"world\")"
+        },
+        {
+          "path": [
+            "[data-key=\"w\"]",
+            "[data-key=\"o\"]",
+            "[data-key=\"r\"]",
+            "[data-key=\"l\"]",
+            "[data-key=\"d\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 0.7
+        },
+        {
+          "eval": "showcase.only({\"neon\": {}}); showcase.caption(\"Swipe trail\", \"Neon tube\")"
+        },
+        {
+          "eval": "showcase.expect(\"magic\")"
+        },
+        {
+          "path": [
+            "[data-key=\"m\"]",
+            "[data-key=\"a\"]",
+            "[data-key=\"g\"]",
+            "[data-key=\"i\"]",
+            "[data-key=\"c\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 0.7
+        },
+        {
+          "eval": "showcase.only({\"ink\": {}}); showcase.caption(\"Swipe trail\", \"Ink brush\")"
+        },
+        {
+          "eval": "showcase.expect(\"swipe\")"
+        },
+        {
+          "path": [
+            "[data-key=\"s\"]",
+            "[data-key=\"w\"]",
+            "[data-key=\"i\"]",
+            "[data-key=\"p\"]",
+            "[data-key=\"e\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 0.7
+        },
+        {
+          "eval": "showcase.only({\"circuit\": {}}); showcase.caption(\"Swipe trail\", \"Circuit trail\")"
+        },
+        {
+          "eval": "showcase.expect(\"space\")"
+        },
+        {
+          "path": [
+            "[data-key=\"s\"]",
+            "[data-key=\"p\"]",
+            "[data-key=\"a\"]",
+            "[data-key=\"c\"]",
+            "[data-key=\"e\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 0.9
+        },
+        {
+          "mark": "word"
+        },
+        {
+          "eval": "showcase.only({\"hop\": {\"collect\": \"arc\", \"word\": \"join\", \"extra\": \"fall\"}, \"trace\": {}}); showcase.text(\"\"); showcase.caption(\"Swiped word\", \"Letter hop: join the suggestion\")"
+        },
+        {
+          "eval": "showcase.expect(\"keyboard\")"
+        },
+        {
+          "path": [
+            "[data-key=\"k\"]",
+            "[data-key=\"e\"]",
+            "[data-key=\"y\"]",
+            "[data-key=\"b\"]",
+            "[data-key=\"o\"]",
+            "[data-key=\"a\"]",
+            "[data-key=\"r\"]",
+            "[data-key=\"d\"]"
+          ],
+          "over": 0.9800000000000001,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 1.7
+        },
+        {
+          "eval": "showcase.only({\"hop\": {\"collect\": \"bounce\", \"word\": \"form\", \"extra\": \"burn\"}, \"trace\": {}}); showcase.caption(\"Swiped word\", \"Letter hop: form the word\")"
+        },
+        {
+          "eval": "showcase.expect(\"magic\")"
+        },
+        {
+          "path": [
+            "[data-key=\"m\"]",
+            "[data-key=\"a\"]",
+            "[data-key=\"g\"]",
+            "[data-key=\"i\"]",
+            "[data-key=\"c\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 1.7
+        },
+        {
+          "eval": "showcase.only({\"hop\": {\"collect\": \"zip\", \"word\": \"text\", \"extra\": \"dust\"}, \"trace\": {}}); showcase.caption(\"Swiped word\", \"Letter hop: fly into the text\")"
+        },
+        {
+          "eval": "showcase.expect(\"effects\")"
+        },
+        {
+          "path": [
+            "[data-key=\"e\"]",
+            "[data-key=\"f\"]",
+            "[data-key=\"e\"]",
+            "[data-key=\"c\"]",
+            "[data-key=\"t\"]",
+            "[data-key=\"s\"]"
+          ],
+          "over": 0.8,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 1.7
+        },
+        {
+          "eval": "showcase.only({\"constellation\": {}}); showcase.caption(\"Swiped word\", \"Constellation\")"
+        },
+        {
+          "eval": "showcase.expect(\"stars\")"
+        },
+        {
+          "path": [
+            "[data-key=\"s\"]",
+            "[data-key=\"t\"]",
+            "[data-key=\"a\"]",
+            "[data-key=\"r\"]",
+            "[data-key=\"s\"]"
+          ],
+          "over": 0.64,
+          "pause": 0.12,
+          "move": 0.3
+        },
+        {
+          "eval": "showcase.expect(null)"
+        },
+        {
+          "record": 1.6
+        },
+        {
+          "mark": "end"
+        },
+        {
+          "record": 0.1
+        }
+      ]
+    }
+  },
+  "banner": {
+    "recording": "gallery",
+    "title": [
+      "KEYFX"
+    ],
+    "tagline": "Effects for Android keyboards",
+    "colors": {
+      "bg": "#0b0d12",
+      "sky_mid": "#141a2a",
+      "sky_end": "#0b0d12",
+      "from": "#8ab4f8",
+      "to": "#a5f3fc",
+      "soft": "#9aa3b8",
+      "accent": "#8ab4f8",
+      "text": "#eef1f8"
+    },
+    "marks": [
+      "typing",
+      "delete",
+      "hold",
+      "enter",
+      "spacebar",
+      "trail",
+      "word"
+    ],
+    "labels": [
+      "TYPING",
+      "BACKSPACE",
+      "HOLD",
+      "ENTER",
+      "SPACEBAR",
+      "TRAILS",
+      "SWIPE"
+    ],
+    "crop": [
+      36,
+      484,
+      844,
+      1024
+    ],
+    "take": [
+      0,
+      96
+    ],
+    "step": 2,
+    "ms": 66
+  },
+  "hero": {
+    "recording": "hero",
+    "marks": [
+      "hero"
+    ],
+    "width": 400,
+    "step": 2,
+    "ms": 66
+  },
+  "clips": {
+    "recording": "gallery",
+    "marks": [
+      "typing",
+      "delete",
+      "hold",
+      "enter",
+      "spacebar",
+      "trail",
+      "word"
+    ],
+    "names": [
+      "typing",
+      "delete",
+      "hold",
+      "enter",
+      "spacebar",
+      "trail",
+      "word"
+    ],
+    "width": 360,
+    "step": 2,
+    "ms": 66
+  },
+  "readme": {
+    "name": "keyfx",
+    "tagline": "Effects for Android keyboards",
+    "captions": {
+      "typing": "typing: key pop, letter float, heat streak, neighbor wave, sparks",
+      "delete": "backspace tap: fire, shatter, laser, disintegrate, glitch",
+      "hold": "backspace hold: black hole, portal, lava rumble",
+      "enter": "enter: rocket, shockwave, check mark, row wave",
+      "spacebar": "spacebar: stars, puff and shimmer, then drag it as a trackpad",
+      "trail": "swipe trail: comet, lightning, neon tube, ink brush, circuit",
+      "word": "swiped word: letter hop three ways, and constellation"
+    },
+    "keep": true
+  }
+}
