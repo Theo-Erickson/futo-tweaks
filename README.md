@@ -1,15 +1,28 @@
+<p align="center">
+  <img src=".github/readme/banner.gif" alt="FX for FUTO Keyboard: effects for the keyboard you have" width="100%">
+</p>
+
 # FX for FUTO Keyboard
 
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/theoerickson)
 [![Latest release](https://img.shields.io/github/v/release/Theo-Erickson/futo-tweaks?label=download)](https://github.com/Theo-Erickson/futo-tweaks/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+<table>
+<tr>
+<td width="46%"><img src=".github/readme/hero.gif" alt="FX for FUTO Keyboard: typing, swiping, deleting whole words and the vertical spacebar cursor" width="100%"></td>
+<td>
+
 **An unofficial LSPosed / Vector module that adds keyboard effects and typing extras to the official [FUTO Keyboard](https://keyboard.futo.org).** It changes the keyboard at runtime, so you keep using FUTO's own app, with FUTO's updates, and get the effects on top.
+
+The clips are recorded in the [keyfx lab](https://theo-erickson.github.io/keyfx/), the browser version of the module's effects, with the same settings.
+
+</td>
+</tr>
+</table>
 
 > [!IMPORTANT]
 > **Unofficial.** FX for FUTO Keyboard is an independent module by Theo Erickson. It is not made, endorsed or supported by FUTO. Please report problems [here](https://github.com/Theo-Erickson/futo-tweaks/issues), not to FUTO.
-
-<!-- Media: a GIF of typing with effects on, e.g. <img src="docs/media/hero.gif" width="360" alt="FX for FUTO Keyboard effects"> -->
 
 ## Contents
 
@@ -18,6 +31,7 @@
 - [Requirements](#requirements)
 - [Install](#install)
 - [Features](#features)
+- [See it in action](#see-it-in-action)
 - [Settings](#settings)
 - [Related projects](#related-projects)
 - [FAQ](#faq)
@@ -86,15 +100,37 @@ All effects come from [keyfx](https://github.com/Theo-Erickson/keyfx) and its la
 
 | Group | Effects |
 |---|---|
-| Typing | Key pop, letter float (rise, grow or ghost key), heat streak, neighbor wave, ripple, sparks |
-| Special keys | Enter sweep; spacebar stars, puff or shimmer; backspace fire, slash or shatter, with the deleted letters burning, splitting or shattering too |
-| Backspace hold | The key becomes a black hole, lava, an opening box or a hole, and the deleted letters swirl, fly on curves, or get one press each |
-| Swipe trail | Key trace, comet, ink brush, stardust |
+| Typing | Key pop, letter float (rise or ghost key), heat streak (glow, wave, progress bar, energizing circuit or rising embers, with an optional combo counter), neighbor wave (wave, orbit, firework or firecracker), ripple, sparks, water drop |
+| Special keys | Enter: sweep, shockwave, rocket, row wave or check mark. Spacebar: stars, puff or shimmer. Backspace tap: fire, slash, shatter, laser, disintegrate, rewind, glitch, shredder, swirl in or vacuum on curves, with the deleted letters reacting too |
+| Backspace hold | The key becomes a black hole, lava, an opening box, a hole or a portal, and the deleted letters swirl in, fly on curves, ride a tractor beam, or get one press each |
+| Swipe trail | Key trace, comet, ink brush, circuit trail, lightning, neon tube, arrow trail, water wake, stardust |
 | Swipe word | Letter hop on the number row (or the top row without one), constellation, commit burst, with letter picking by turns, pauses or every key crossed |
-| Long press and spacebar | Hold charge (ring or liquid fill) and the spacebar trackpad |
+| Long press and spacebar | Hold charge (liquid fill, ring, orbiting sparks, burning fuse or clock wipe) and the spacebar trackpad (line rails, dot field, still grid, sonar or spotlight) |
 | Keyboard show | Center bloom or row cascade |
 
 When one press removes a whole word (like undoing a swiped word), every letter gets the backspace effect. Effects use your Material You accent by default, and switch off when Android's "Remove animations" setting is on.
+
+## See it in action
+
+Recorded in the [keyfx lab](https://theo-erickson.github.io/keyfx/), the browser version of the module's effects, with the same settings; the lab's keyboard is a mock of FUTO Keyboard. Each clip runs through a few of the effects in its group. The module draws over FUTO's keys without moving them, so these clips leave out what only [FXboard](https://github.com/Theo-Erickson/fxboard) can do, like scaling the real key.
+
+<table>
+<tr>
+<td align="center"><img src=".github/readme/clip_typing.gif" width="360" alt="Typing: key pop, letter float, heat streak, neighbor wave, sparks"><br><b>Typing</b>: key pop, letter float, heat streak, neighbor wave, sparks</td>
+<td align="center"><img src=".github/readme/clip_delete.gif" width="360" alt="Backspace tap: fire, shatter, laser, disintegrate, glitch"><br><b>Backspace tap</b>: fire, shatter, laser, disintegrate, glitch</td>
+</tr>
+<tr>
+<td align="center"><img src=".github/readme/clip_hold.gif" width="360" alt="Backspace hold: black hole, portal, lava rumble"><br><b>Backspace hold</b>: black hole, portal, lava rumble</td>
+<td align="center"><img src=".github/readme/clip_enter.gif" width="360" alt="Enter: rocket, shockwave, check mark, row wave"><br><b>Enter</b>: rocket, shockwave, check mark, row wave</td>
+</tr>
+<tr>
+<td align="center"><img src=".github/readme/clip_spacebar.gif" width="360" alt="Spacebar: stars, puff and shimmer, then drag it as a trackpad"><br><b>Spacebar</b>: stars, puff and shimmer, then drag it as a trackpad</td>
+<td align="center"><img src=".github/readme/clip_trail.gif" width="360" alt="Swipe trail: comet, lightning, neon tube, ink brush, circuit"><br><b>Swipe trail</b>: comet, lightning, neon tube, ink brush, circuit</td>
+</tr>
+<tr>
+<td align="center"><img src=".github/readme/clip_word.gif" width="360" alt="Swiped word: letter hop three ways, and constellation"><br><b>Swiped word</b>: letter hop three ways, and constellation</td>
+</tr>
+</table>
 
 ## Settings
 
@@ -159,6 +195,20 @@ Through [Ko-fi](https://ko-fi.com/theoerickson). It's optional, and every featur
 - **Command line:** `./gradlew assembleRelease` (output in `app/build/outputs/apk/release/`). Needs JDK 17.
 - **Without the Android SDK:** `nosdk/build.sh` builds with javac, dx, aapt2 and uber-apk-signer, all from GitHub. See the script's header for the jars it needs.
 - **GitHub Actions:** push to a fork, and `.github/workflows/build.yml` builds the APK on every pull request and publishes a release on every push to `main`. Add the `FORK_KEYSTORE_B64`, `FORK_KEYSTORE_PASSWORD`, `FORK_KEY_ALIAS` and `FORK_KEY_PASSWORD` secrets to sign with your own key; without them it signs with a throwaway debug key.
+
+### Recording the README media
+
+The GIFs above are recorded with Readmotion from `tools/readmotion/`, playing keyfx's lab in its showcase mode from the `keyfx/` subtree. The effect gallery is shared with keyfx and FXboard (`keyfx/tools/readmotion/showcase.py`); `scenes.py` adds this module's hero. To record them again:
+
+```
+python tools/readmotion/scenes.py
+readmotion-cli capture tools/readmotion/readmotion.json
+readmotion-cli build tools/readmotion/readmotion.json
+```
+
+`scenes.py` writes the recordings into the config, so edit it rather than the steps in the JSON. `build` also writes full-size MP4s of every clip to `tools/readmotion/.work/full/`.
+
+The hero is meant to end on a phone recording of the module's settings in the real FUTO Keyboard, which the lab can't show. That recording is still to do: [`tools/readmotion/phone/TODO.md`](tools/readmotion/phone/TODO.md) says what to record and how to add it.
 
 ### Project layout
 
