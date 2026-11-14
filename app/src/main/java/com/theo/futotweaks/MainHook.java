@@ -90,8 +90,9 @@ public class MainHook implements IXposedHookLoadPackage {
     // keyfx settings the hooks read themselves (whole-word deletion), over the same prefs
     private static FxSettings sHostSettings;
     private static boolean sAnimationsOn = true;
-    // A password field is being typed in: keyfx stays off and its text is never read
-    private static boolean sPrivateField;
+    // The field being typed in, for keyfx's privacy mode: in password and incognito fields
+    // keyfx stays off and its text is never read
+    private static int sInputType, sImeOptions;
     private static long sLongPressMs = 300;
 
     // Keyboard view position in the layer (the IME window root), updated at every touch-down
@@ -265,7 +266,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 // No Material You palette: keyfx keeps its default blue
             }
             fx.setEnabled(sAnimationsOn);
-            fx.setPrivateField(sPrivateField);
+            fx.setInputField(sInputType, sImeOptions);
             root.getOverlay().add(fx);
             XposedHelpers.setAdditionalInstanceField(root, FX_FIELD, fx);
         }
@@ -357,8 +358,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             refreshPrefs(false);
                             applyNavBar(sIme);
                             final EditorInfo info = (EditorInfo) param.args[0];
-                            sPrivateField = info != null && KeyFx.isPrivateInput(info.inputType);
-                            if (sFx != null) sFx.setPrivateField(sPrivateField);
+                            sInputType = info != null ? info.inputType : 0;
+                            sImeOptions = info != null ? info.imeOptions : 0;
+                            if (sFx != null) sFx.setInputField(sInputType, sImeOptions);
                             final InputConnection ic = sIme.getCurrentInputConnection();
                             hookConnectionClass(ic);
                             Caret.request(ic);

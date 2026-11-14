@@ -12,6 +12,7 @@ import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.text.InputType;
 import android.util.Log;
+import android.view.inputmethod.EditorInfo;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -94,6 +95,23 @@ public final class KeyFx extends Drawable {
             Field.range("speed", "Animation speed", 0.25f, 2f, 0.05f, "×", 1f),
             Field.range("intensity", "Overall intensity", 0f, 1.5f, 0.05f, "×", 1f));
 
+    /**
+     * When effects switch themselves off so they never show what is typed. "always" is privacy
+     * mode turned on by hand, in every field (hosts may offer a quick toggle for it, see
+     * PRIVACY_ALWAYS_KEY). Password fields are always private; incognito fields are the ones whose app asks the keyboard not to learn
+     * (private browser tabs, incognito keyboards in messengers).
+     */
+    public static final Section PRIVACY = new Section("privacy", "Privacy", 5, "Privacy mode",
+            "Effects always stay off in password fields, so none of them gives away what you type. "
+                    + "They can also stay off in private browser tabs and other fields that ask the keyboard not to learn, "
+                    + "or everywhere while you turn privacy mode on.",
+            false, true,
+            Field.toggle("always", "Always on: effects off everywhere", false),
+            Field.toggle("incognito", "Off in private tabs and incognito fields", true));
+
+    /** The preference key of the hand-turned privacy mode, for hosts that offer a quick toggle. */
+    public static final String PRIVACY_ALWAYS_KEY = "privacy.always";
+
     /** Which swipe letters count as picked, for effects that follow the word's letters. */
     public static final Section PICK = new Section("pick", "Swipe word", 500, "Swipe letter picking",
             "Which letters of a swipe count for letter hop and constellation. Key trace still lights every key you cross.",
@@ -107,6 +125,7 @@ public final class KeyFx extends Drawable {
     public static List<Section> schema() {
         final ArrayList<Section> out = new ArrayList<>();
         out.add(GLOBAL);
+        out.add(PRIVACY);
         out.add(PICK);
         Collections.addAll(out, Modules.sections());
         Collections.sort(out, new Comparator<Section>() {
@@ -129,10 +148,11 @@ public final class KeyFx extends Drawable {
 
     private FxLayout layout = FxLayout.EMPTY;
     private int systemAccent = 0xFF8AB4F8;
-    // On while animations are allowed and the field isn't private; see setEnabled(), setPrivateField()
+    // On while animations are allowed and the field isn't private; see setEnabled(), setInputField()
     private boolean enabled = true;
     private boolean animationsOn = true;
-    private boolean privateField;
+    private boolean privateField, incognitoField;
+    private boolean offInIncognito = true, privacyAlways;
     private FxHost host;
     private boolean keysWereMoving;
     private WordLook word;
@@ -179,6 +199,9 @@ public final class KeyFx extends Drawable {
         speed = Math.max(0.1f, settings.f("global", "speed"));
         intensity = settings.f("global", "intensity");
         dark = !"light".equals(settings.s("global", "kbTheme"));
+        offInIncognito = settings.b("privacy", "incognito");
+        privacyAlways = settings.b("privacy", "always");
+        applyEnabled();
     }
 
     /** The Material You accent, used when the accent setting is "system". */
@@ -194,28 +217,48 @@ public final class KeyFx extends Drawable {
     }
 
     /**
-     * Whether the field being typed in is private, like a password (see isPrivateInput()).
-     * keyfx draws nothing there, so no effect hints at what is typed, and isEnabled() turns
-     * false so hosts that check it also stop reading the field's text.
+     * The field being typed in, from its EditorInfo, for privacy mode. Hosts call it whenever
+     * input starts. In a password field (see isPrivateInput()), and in an incognito field (see
+     * isIncognitoInput()) unless the user turned that off, keyfx draws nothing, so no effect
+     * hints at what is typed, and isEnabled() turns false so hosts that check it also stop
+     * reading the field's text.
      */
-    public void setPrivateField(boolean isPrivate) {
-        privateField = isPrivate;
+    public void setInputField(int inputType, int imeOptions) {
+        privateField = isPrivateInput(inputType);
+        incognitoField = isIncognitoInput(imeOptions);
         applyEnabled();
     }
 
-    /** False while animations are off or the field is private: send no events and read no text. */
+    /**
+     * Whether the field being typed in is a password field. Older hosts call this; it says
+     * nothing about incognito, so prefer setInputField().
+     */
+    public void setPrivateField(boolean isPrivate) {
+        privateField = isPrivate;
+        incognitoField = false;
+        applyEnabled();
+    }
+
+    /** False while animations are off or privacy mode applies: send no events and read no text. */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /** Whether privacy mode is what keeps effects off in the current field. */
+    public boolean isPrivacyOn() {
+        return privacyAlways || privateField || (incognitoField && offInIncognito);
+    }
+
     private void applyEnabled() {
-        enabled = animationsOn && !privateField;
+        final boolean was = enabled;
+        enabled = animationsOn && !isPrivacyOn();
         if (!enabled) reset();
+        else if (!was && (caps & CAP_KEY_TRANSFORM) != 0 && host != null) host.redrawKeys();
     }
 
     /**
      * Whether an EditorInfo.inputType is a password field, shown or hidden, text or number.
-     * Hosts pass the result to setPrivateField() when input starts.
+     * setInputField() checks it.
      */
     public static boolean isPrivateInput(int inputType) {
         final int variation = inputType & InputType.TYPE_MASK_VARIATION;
@@ -229,6 +272,14 @@ public final class KeyFx extends Drawable {
             default:
                 return false;
         }
+    }
+
+    /**
+     * Whether an EditorInfo.imeOptions asks the keyboard not to learn from what is typed, as
+     * private browser tabs and incognito modes do. setInputField() checks it.
+     */
+    public static boolean isIncognitoInput(int imeOptions) {
+        return (imeOptions & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0;
     }
 
     public void setLayout(FxLayout l) {
